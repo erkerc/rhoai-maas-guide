@@ -19,6 +19,16 @@ Install the operator subscriptions required by Red Hat OpenShift AI (RHOAI) 3.4 
 | Node Feature Discovery (`nfd`) | `openshift-nfd` | Detects hardware features (GPUs, CPU flags) and labels nodes accordingly |
 | NVIDIA GPU Operator (`gpu-operator-certified`) | `nvidia-gpu-operator` | Installs NVIDIA drivers, device plugin, and monitoring for GPU workloads |
 
+### Optional MetalLB Operator (Non-Cloud Clusters)
+
+| Operator | Namespace | Purpose |
+|----------|-----------|---------|
+| MetalLB Operator (`metallb-operator`) | `metallb-system` | Provides LoadBalancer IP addresses for the MaaS Gateway on baremetal, OpenStack, or SNO clusters |
+
+On non-cloud clusters (baremetal, OpenStack, RHPDS, SNO), there is no cloud load-balancer controller to provision external IPs for LoadBalancer Services. MetalLB fills this role, assigning IPs from a configured pool so the MaaS Gateway can reach `Programmed=True`.
+
+> **Note:** The `setup-maas.sh` script auto-detects non-cloud platforms and installs MetalLB automatically if needed.
+
 ## Installation
 
 ### Step 1: Install Required Operators
@@ -35,6 +45,29 @@ If your cluster has GPU nodes (or you plan to add them), install the GPU operato
 
 ```bash
 oc apply -k 01-prerequisites/gpu/
+```
+
+### Step 3 (Optional): Install MetalLB for Non-Cloud Clusters
+
+If your cluster is baremetal, OpenStack, or a RHPDS/SNO environment (no cloud LB controller), install MetalLB:
+
+```bash
+oc apply -k 01-prerequisites/metallb/
+```
+
+Wait for the MetalLB CSV to succeed, then create the MetalLB CR and configure an IP pool:
+
+```bash
+# Wait for MetalLB operator
+oc wait csv -n metallb-system -l operators.coreos.com/metallb-operator.metallb-system="" \
+  --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s
+
+# Create MetalLB instance
+oc apply -f 01-prerequisites/metallb/metallb.yaml
+
+# Create IPAddressPool + L2Advertisement (adjust IP range for your network)
+export METALLB_IP_RANGE="192.168.1.240-192.168.1.240"
+envsubst < 04-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
 ```
 
 ## Verification
@@ -117,6 +150,12 @@ oc get subscriptions.operators.coreos.com -A \
     kustomization.yaml          # aggregates NFD + NVIDIA
     nfd/
     nvidia-operator/
+  metallb/
+    kustomization.yaml          # MetalLB namespace + operatorgroup + subscription
+    namespace.yaml
+    operatorgroup.yaml
+    subscription.yaml
+    metallb.yaml                # MetalLB CR (applied after CSV succeeds)
 ```
 
 ## References

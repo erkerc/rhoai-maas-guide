@@ -132,11 +132,12 @@ The LLMInferenceService should show a `Ready` condition. For GPU models, initial
 Once the model is ready, test inference through the MaaS API:
 
 ```bash
-# Get the MaaS API endpoint
-MAAS_URL=$(oc get gateway maas-default-gateway -n openshift-ingress -o jsonpath='{.status.addresses[0].value}')
+# Get the MaaS API domain
+CLUSTER_DOMAIN=$(oc get ingresses.config/cluster -o jsonpath='{.spec.domain}')
+MAAS_URL="maas.${CLUSTER_DOMAIN}"
 
 # Create an API key (requires the maas-api to be running)
-API_KEY=$(curl -sk "https://${MAAS_URL}/maas-api/v1/apikeys" \
+API_KEY=$(curl -sk -X POST "https://${MAAS_URL}/maas-api/v1/api-keys" \
   -H "Authorization: Bearer $(oc whoami -t)" \
   -H "Content-Type: application/json" \
   -d '{"name": "test-key"}' | jq -r '.key')
@@ -145,8 +146,12 @@ API_KEY=$(curl -sk "https://${MAAS_URL}/maas-api/v1/apikeys" \
 curl -sk "https://${MAAS_URL}/v1/models" \
   -H "Authorization: Bearer ${API_KEY}"
 
-# Send a chat completion request
-curl -sk "https://${MAAS_URL}/v1/chat/completions" \
+# Get the model endpoint URL from the listing
+MODEL_URL=$(curl -sk "https://${MAAS_URL}/v1/models" \
+  -H "Authorization: Bearer ${API_KEY}" | jq -r '.data[0].url')
+
+# Send a chat completion request (uses the model-specific URL path)
+curl -sk "${MODEL_URL}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{

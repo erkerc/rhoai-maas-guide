@@ -177,9 +177,16 @@ oc wait --for=condition=Programmed gateway/maas-default-gateway \
   -n openshift-ingress --timeout=120s
 ```
 
-> **Non-cloud clusters (baremetal/OpenStack):** If the Gateway stays in
-> `AddressNotAssigned` because no cloud load-balancer provisions an external IP,
-> create a passthrough Route as a fallback:
+> **Non-cloud clusters (baremetal/OpenStack/RHPDS/SNO):** If the Gateway stays
+> in `AddressNotAssigned` because no cloud load-balancer provisions an external
+> IP, you need **MetalLB** to assign a LoadBalancer IP. See
+> [Phase 1: MetalLB for Non-Cloud Clusters](../01-prerequisites/README.md#step-3-optional-install-metallb-for-non-cloud-clusters).
+>
+> After MetalLB is installed with an IPAddressPool, the Gateway service will
+> receive an external IP and reach `Programmed=True`.
+>
+> Additionally, create a passthrough Route to make the Gateway reachable via
+> the cluster's DNS:
 >
 > ```bash
 > envsubst '${CLUSTER_DOMAIN}' < 04-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
@@ -187,7 +194,7 @@ oc wait --for=condition=Programmed gateway/maas-default-gateway \
 >
 > This routes traffic through the existing OpenShift ingress controller. See
 > [OpenShift Gateway Setup](../04-maas-platform/openshift-gateway-setup/README.md)
-> for MetalLB-based alternatives.
+> for details.
 
 Verify:
 

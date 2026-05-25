@@ -198,26 +198,20 @@ else
     log_fail "ModelsAsServiceReady=$MAAS_READY"
 fi
 
-# Health endpoint (try with --resolve to bypass DNS cache)
+# Health endpoint (try with --resolve to bypass DNS cache for cloud LB hostnames)
 GATEWAY_ADDR=$(oc get gateway maas-default-gateway -n openshift-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null || echo "")
+GATEWAY_IP=""
 if [ -n "$GATEWAY_ADDR" ]; then
-    # Resolve ELB hostname to IP for --resolve
-    GATEWAY_IP=$(dig +short "$GATEWAY_ADDR" 2>/dev/null | head -1 || echo "")
-    if [ -n "$GATEWAY_IP" ]; then
-        HEALTH_CODE=$(curl -sSk --connect-timeout 10 --max-time 30 \
-            --resolve "maas.${CLUSTER_DOMAIN}:443:${GATEWAY_IP}" \
-            -o /dev/null -w '%{http_code}' \
-            "${HOST}/maas-api/health" 2>/dev/null || echo "000")
-    else
-        HEALTH_CODE=$(curl -sSk --connect-timeout 10 --max-time 30 \
-            -o /dev/null -w '%{http_code}' \
-            "${HOST}/maas-api/health" 2>/dev/null || echo "000")
+    # Only use --resolve for hostnames (e.g. AWS ELB), not for bare IPs (e.g. MetalLB)
+    if echo "$GATEWAY_ADDR" | grep -qE '[a-zA-Z]'; then
+        GATEWAY_IP=$(dig +short "$GATEWAY_ADDR" 2>/dev/null | head -1 || echo "")
     fi
-else
-    HEALTH_CODE=$(curl -sSk --connect-timeout 10 --max-time 30 \
-        -o /dev/null -w '%{http_code}' \
-        "${HOST}/maas-api/health" 2>/dev/null || echo "000")
 fi
+
+HEALTH_CODE=$(curl -sSk --connect-timeout 10 --max-time 30 \
+    ${GATEWAY_IP:+--resolve "maas.${CLUSTER_DOMAIN}:443:${GATEWAY_IP}"} \
+    -o /dev/null -w '%{http_code}' \
+    "${HOST}/maas-api/health" 2>/dev/null || echo "000")
 
 if [ "$HEALTH_CODE" = "200" ]; then
     log_pass "Health endpoint returns HTTP 200"
@@ -228,13 +222,13 @@ else
     log_warn "Health endpoint returned HTTP $HEALTH_CODE (expected 200)"
 fi
 
-# Helper for curl with DNS resolution
+# Helper for curl with optional DNS resolution (only for cloud LB hostnames)
 maas_curl() {
-    local extra_args=()
     if [ -n "${GATEWAY_IP:-}" ]; then
-        extra_args+=(--resolve "maas.${CLUSTER_DOMAIN}:443:${GATEWAY_IP}")
+        curl -sSk --connect-timeout 10 --max-time 30 --resolve "maas.${CLUSTER_DOMAIN}:443:${GATEWAY_IP}" "$@"
+    else
+        curl -sSk --connect-timeout 10 --max-time 30 "$@"
     fi
-    curl -sSk --connect-timeout 10 --max-time 30 "${extra_args[@]}" "$@"
 }
 
 # Bail out if health endpoint failed

@@ -164,6 +164,15 @@ HAS_POSTGRES=false
 HAS_MAAS_API=false
 HAS_TENANT=false
 HAS_MODELS=false
+HAS_METALLB=false
+
+# Detect cloud vs non-cloud platform (affects Gateway LB provisioning)
+PLATFORM_TYPE=$(oc get infrastructure cluster -o jsonpath='{.status.platformStatus.type}' 2>/dev/null || echo "Unknown")
+IS_CLOUD_PLATFORM=false
+case "$PLATFORM_TYPE" in
+    AWS|GCP|Azure) IS_CLOUD_PLATFORM=true ;;
+esac
+log_info "Platform type: ${PLATFORM_TYPE} (cloud LB: ${IS_CLOUD_PLATFORM})"
 
 # Note: avoid grep -q in pipelines — with pipefail, grep -q causes SIGPIPE (exit 141)
 RHOAI_CSVS=$(oc get csv -n redhat-ods-operator --no-headers 2>/dev/null || true)
@@ -185,6 +194,8 @@ oc get deployment maas-api -n "$NAMESPACE" &>/dev/null && HAS_MAAS_API=true
 oc get tenant -n models-as-a-service &>/dev/null && HAS_TENANT=true
 MODEL_COUNT=$(oc get llminferenceservice -n llm --no-headers 2>/dev/null | wc -l | tr -d ' ' || echo "0")
 [ "$MODEL_COUNT" -gt 0 ] 2>/dev/null && HAS_MODELS=true
+METALLB_CSVS=$(oc get csv -n metallb-system --no-headers 2>/dev/null || true)
+echo "$METALLB_CSVS" | grep "metallb-operator" >/dev/null 2>&1 && HAS_METALLB=true
 
 echo ""
 log_info "Detected state:"
@@ -199,6 +210,7 @@ log_info "  modelsAsService:    $([ "$HAS_MAAS_MANAGED" = true ] && echo "Manage
 log_info "  PostgreSQL:         $([ "$HAS_POSTGRES" = true ] && echo "running" || echo "not deployed")"
 log_info "  maas-api:           $([ "$HAS_MAAS_API" = true ] && echo "running" || echo "not deployed")"
 log_info "  Tenant CR:          $([ "$HAS_TENANT" = true ] && echo "ready" || echo "not found")"
+log_info "  MetalLB operator:   $([ "$HAS_METALLB" = true ] && echo "installed" || echo "not found")"
 log_info "  Models deployed:    $([ "$HAS_MODELS" = true ] && echo "yes" || echo "no")"
 
 # Determine which phases will run
@@ -358,6 +370,64 @@ if should_run 2; then
                     -o jsonpath='{.status.conditions[?(@.type=="Programmed")].reason}' 2>/dev/null || echo "")
                 if [ "$GW_REASON" = "AddressNotAssigned" ]; then
                     log_warn "Gateway LoadBalancer address pending (no cloud LB provisioner)"
+
+                    # Non-cloud clusters need MetalLB to provision LB IPs
+                    if [ "$IS_CLOUD_PLATFORM" = false ]; then
+                        log_step "Non-cloud platform detected — installing MetalLB..."
+
+                        if [ "$HAS_METALLB" = false ]; then
+                            log_info "Installing MetalLB operator..."
+                            oc apply -k "$GUIDE_DIR/01-prerequisites/metallb/"
+                            log_info "Waiting for MetalLB CSV..."
+                            METALLB_TIMEOUT=120
+                            METALLB_ELAPSED=0
+                            while [ $METALLB_ELAPSED -lt $METALLB_TIMEOUT ]; do
+                                METALLB_CSV_STATUS=$(oc get csv -n metallb-system --no-headers 2>/dev/null | grep metallb-operator | awk '{print $NF}' || echo "")
+                                if [ "$METALLB_CSV_STATUS" = "Succeeded" ]; then
+                                    break
+                                fi
+                                sleep 10
+                                METALLB_ELAPSED=$((METALLB_ELAPSED + 10))
+                            done
+                            if [ "$METALLB_CSV_STATUS" != "Succeeded" ]; then
+                                log_warn "MetalLB CSV did not reach Succeeded within ${METALLB_TIMEOUT}s (status: ${METALLB_CSV_STATUS:-unknown})"
+                            else
+                                log_info "MetalLB operator: Succeeded"
+                            fi
+                        fi
+
+                        # Create MetalLB CR if needed
+                        if ! oc get metallb metallb -n metallb-system &>/dev/null; then
+                            log_info "Creating MetalLB CR..."
+                            oc apply -f "$GUIDE_DIR/01-prerequisites/metallb/metallb.yaml"
+                            oc wait --for=jsonpath='{.status.conditions[?(@.type=="Available")].status}'=True \
+                                metallb/metallb -n metallb-system --timeout=120s 2>/dev/null || \
+                                log_warn "MetalLB CR did not become Available"
+                        fi
+
+                        # Create IPAddressPool + L2Advertisement if needed
+                        if ! oc get ipaddresspool maas-pool -n metallb-system &>/dev/null; then
+                            NODE_IP=$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null || echo "")
+                            if [ -n "$NODE_IP" ]; then
+                                METALLB_IP_RANGE="192.168.1.240-192.168.1.240"
+                                log_info "Creating MetalLB IPAddressPool: ${METALLB_IP_RANGE}"
+                                export METALLB_IP_RANGE
+                                envsubst '${METALLB_IP_RANGE}' < "$GUIDE_DIR/04-maas-platform/openshift-gateway-setup/metallb-config.yaml" | oc apply -f -
+                            else
+                                log_warn "Cannot detect node IP for MetalLB pool"
+                            fi
+                        fi
+
+                        # Wait for Gateway to pick up the MetalLB address
+                        log_info "Waiting for Gateway to become Programmed with MetalLB address..."
+                        if oc wait gateway/maas-default-gateway -n openshift-ingress --for=condition=Programmed --timeout=60s 2>/dev/null; then
+                            log_info "Gateway: Programmed (MetalLB)"
+                        else
+                            log_warn "Gateway still not Programmed after MetalLB setup"
+                        fi
+                    fi
+
+                    # Create passthrough Route as fallback (works for both MetalLB and non-MetalLB)
                     log_info "Creating passthrough Route as fallback..."
                     ROUTE_TMPL="$GUIDE_DIR/04-maas-platform/openshift-gateway-setup/route.yaml.tmpl"
                     if [ -f "$ROUTE_TMPL" ]; then
