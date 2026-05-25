@@ -1,0 +1,169 @@
+# Phase 5: MaaS Model Deployment
+
+This phase deploys LLM models and registers them with the MaaS platform. Each model includes the inference workload (LLMInferenceService) and the MaaS control plane resources (MaaSModelRef, MaaSAuthPolicy, MaaSSubscription) that enable API key management, access control, and rate limiting.
+
+## Prerequisites
+
+- Phases 1-4 completed (RHOAI installed, MaaS platform running)
+- MaaS Gateway available in `openshift-ingress` namespace
+- `maas-api` and `maas-controller` pods running in `redhat-ods-applications`
+
+## Available Models
+
+### simulator (recommended for initial testing)
+
+A CPU-only mock LLM that requires no GPU. It uses the `llm-d-inference-sim` container to simulate an OpenAI-compatible inference endpoint. This is the best choice for validating the MaaS platform without GPU infrastructure.
+
+- **Runtime**: llm-d-inference-sim (CPU-only)
+- **Resources**: 100m-500m CPU, 256Mi-512Mi memory
+- **GPU**: Not required
+- **Startup time**: ~30 seconds
+
+### granite-tiny-gpu
+
+Red Hat AI Granite 4.0-h-tiny FP8 Dynamic, a small Granite model (~1B parameters) running on the Red Hat AI Inference Server (vLLM CUDA). Suitable for clusters with modest GPU resources.
+
+- **Runtime**: vLLM CUDA (registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0)
+- **Model weights**: OCI modelcar from registry.redhat.io
+- **Resources**: 2-4 CPU, 8Gi-24Gi memory, 1x NVIDIA GPU
+- **GPU memory**: ~8GB required
+- **Startup time**: 5-15 minutes (image pull + model loading)
+
+### gpt-oss-20b
+
+OpenAI gpt-oss-20b running on the Red Hat AI Inference Server (vLLM CUDA). Requires a capable GPU node (A10G or better) with sufficient VRAM.
+
+- **Runtime**: vLLM CUDA (registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0)
+- **Model weights**: OCI modelcar from registry.redhat.io (~8GB download)
+- **Resources**: 2-4 CPU, 16Gi-60Gi memory, 1x NVIDIA GPU
+- **GPU memory**: ~16GB required
+- **Startup time**: 5-15 minutes (image pull + model loading)
+
+## Custom Resource Descriptions
+
+Each model deployment creates the following CRDs under `maas.opendatahub.io/v1alpha1`:
+
+### LLMInferenceService (namespace: `llm`)
+
+Defines the inference workload -- the container, model weights, resource requests, health probes, and gateway routing. This is the actual serving pod that handles inference requests.
+
+### MaaSModelRef (namespace: `llm`)
+
+Registers the LLMInferenceService with the MaaS control plane. The MaaS API uses this reference to discover available models and route API requests to the correct inference endpoint.
+
+### MaaSAuthPolicy (namespace: `models-as-a-service`)
+
+Defines who can access the model. The examples here grant access to all authenticated users (`system:authenticated` group). You can restrict access to specific users or groups by modifying the `subjects` field.
+
+### MaaSSubscription (namespace: `models-as-a-service`)
+
+Defines rate-limiting tiers for model access. Each model ships with two tiers:
+
+- **Free tier** (priority 10): 100 tokens/min for all authenticated users
+- **Premium tier** (priority 20): 100,000 tokens/min for all authenticated users
+
+Higher-priority subscriptions take precedence. You can adjust limits, windows, and subject groups to match your usage policies.
+
+## Directory Structure
+
+Each model follows the same Kustomize layout:
+
+```
+{model}/
+  kustomization.yaml          # Aggregates llm/ and maas/ subdirectories
+  llm/
+    model.yaml                # LLMInferenceService CR
+    kustomization.yaml        # Sets namespace: llm (+ namePrefix for simulator)
+  maas/
+    maas-model.yaml           # MaaSModelRef CR
+    maas-auth-policy.yaml     # MaaSAuthPolicy CR (namespace: models-as-a-service)
+    maas-subscription-free.yaml     # Free tier MaaSSubscription
+    maas-subscription-premium.yaml  # Premium tier MaaSSubscription
+    kustomization.yaml        # Lists all MaaS resources
+```
+
+## Deploying a Model
+
+Create the `llm` namespace if it doesn't exist:
+
+```bash
+oc create namespace llm
+```
+
+Deploy the simulator (no GPU required):
+
+```bash
+oc apply -k 05-maas-models/simulator/
+```
+
+Or deploy a GPU model if your cluster has NVIDIA GPUs:
+
+```bash
+# For clusters with modest GPU (8GB+ VRAM)
+oc apply -k 05-maas-models/granite-tiny-gpu/
+
+# For clusters with larger GPU (16GB+ VRAM, A10G or better)
+oc apply -k 05-maas-models/gpt-oss-20b/
+```
+
+## Verifying Model Readiness
+
+After deploying, verify that the model is ready:
+
+```bash
+# Check LLMInferenceService status
+oc get llminferenceservice -n llm
+
+# Check that model pods are running
+oc get pods -n llm
+
+# Check MaaSModelRef registration
+oc get maasmodelref -n llm -o wide
+
+# Check MaaSAuthPolicy and MaaSSubscription
+oc get maasauthpolicy -n models-as-a-service
+oc get maassubscription -n models-as-a-service
+```
+
+The LLMInferenceService should show a `Ready` condition. For GPU models, initial startup takes 5-15 minutes while the container image is pulled and model weights are loaded into GPU memory.
+
+## Testing Inference
+
+Once the model is ready, test inference through the MaaS API:
+
+```bash
+# Get the MaaS API endpoint
+MAAS_URL=$(oc get gateway maas-default-gateway -n openshift-ingress -o jsonpath='{.status.addresses[0].value}')
+
+# Create an API key (requires the maas-api to be running)
+API_KEY=$(curl -sk "https://${MAAS_URL}/maas-api/v1/apikeys" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test-key"}' | jq -r '.key')
+
+# List available models
+curl -sk "https://${MAAS_URL}/v1/models" \
+  -H "Authorization: Bearer ${API_KEY}"
+
+# Send a chat completion request
+curl -sk "https://${MAAS_URL}/v1/chat/completions" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "facebook/opt-125m",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+For GPU models, replace the model name with `granite-4-tiny` or `gpt-oss-20b` as appropriate.
+
+## Removing a Model
+
+```bash
+oc delete -k 05-maas-models/simulator/
+```
+
+## Further Reading
+
+- [Upstream MaaS Documentation](https://opendatahub-io.github.io/models-as-a-service/latest/)
+- [MaaS CRD Reference (models-as-a-service repo)](https://github.com/opendatahub-io/models-as-a-service)

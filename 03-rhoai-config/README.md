@@ -1,0 +1,125 @@
+# Phase 3: RHOAI Configuration
+
+Configure the RHOAI operator instances after the operator is installed and ready (Phase 2).
+
+## Prerequisites
+
+- RHOAI operator is installed and CSV is in `Succeeded` state
+- Phase 2 (platform configuration) is fully applied
+
+Verify the operator is ready before proceeding:
+
+```bash
+oc get csv -n redhat-ods-operator | grep rhods-operator
+# STATUS should be "Succeeded"
+```
+
+## Apply
+
+On a fresh install, apply in two stages. The `OdhDashboardConfig` CRD does not
+exist until the RHOAI operator has reconciled the DataScienceCluster, so
+applying the full kustomization in one shot will fail the first time.
+
+```bash
+# Stage 1: DSC and DSCI (triggers operator reconciliation)
+oc apply -f 03-rhoai-config/dscinitialization.yaml
+oc apply -f 03-rhoai-config/datasciencecluster.yaml
+```
+
+Wait for the operator to reconcile and register all CRDs (see Verify section
+below), then apply the dashboard config:
+
+```bash
+# Stage 2: Dashboard config (requires OdhDashboardConfig CRD to exist)
+oc apply -f 03-rhoai-config/odh-dashboard-config.yaml
+```
+
+On subsequent runs (CRDs already exist), `oc apply -k 03-rhoai-config/` works
+in one shot.
+
+## Verify
+
+### Wait for DSC conditions
+
+The DataScienceCluster reconciles multiple components. Wait for KServe and
+the Model Controller (MaaS) to reach Ready:
+
+```bash
+# Wait for KServe to be ready (up to 5 minutes)
+oc wait --for=jsonpath='{.status.conditions[?(@.type=="KserveReady")].status}'=True \
+  datasciencecluster/default-dsc --timeout=300s
+
+# Wait for Model Controller (MaaS) to be ready (up to 5 minutes)
+oc wait --for=jsonpath='{.status.conditions[?(@.type=="ModelControllerReady")].status}'=True \
+  datasciencecluster/default-dsc --timeout=300s
+```
+
+### Check MaaS CRDs are installed
+
+The operator installs MaaS CRDs when `modelsAsService` is set to Managed:
+
+```bash
+oc get crd | grep maas.opendatahub.io
+# Expected CRDs:
+#   maasauthpolicies.maas.opendatahub.io
+#   maasmodelrefs.maas.opendatahub.io
+#   maassubscriptions.maas.opendatahub.io
+#   tenants.maas.opendatahub.io
+```
+
+### Check maas-api deployment
+
+```bash
+oc get deployment maas-api -n redhat-ods-applications
+oc rollout status deployment/maas-api -n redhat-ods-applications --timeout=120s
+```
+
+Note: maas-api will crash-loop until the PostgreSQL database and `maas-db-config`
+secret are created in Phase 4. This is expected behavior.
+
+### Check DSCInitialization
+
+```bash
+oc get dscinitializations default-dsci -o jsonpath='{.status.conditions}' | jq .
+```
+
+### Check OdhDashboardConfig flags
+
+```bash
+oc get odhdashboardconfig odh-dashboard-config -n redhat-ods-applications \
+  -o jsonpath='{.spec.dashboardConfig}' | jq .
+```
+
+Verify the following flags are set:
+- `modelAsService: true` -- enables the Models as a Service tab
+- `genAiStudio: true` -- enables the GenAI Studio tab (requires llamastackoperator Managed)
+- `maasAuthPolicies: true` -- enables MaaS auth policy management in the UI
+- `observabilityDashboard: true` -- enables the Observability tab (requires COO + monitoring configured)
+
+## What this creates
+
+| Resource | Purpose |
+|----------|---------|
+| `DSCInitialization/default-dsci` | Configures applications namespace, monitoring, and trusted CA bundle |
+| `DataScienceCluster/default-dsc` | Enables all RHOAI components including KServe with modelsAsService Managed |
+| `OdhDashboardConfig/odh-dashboard-config` | Enables MaaS, GenAI Studio, Auth Policies, and Observability UI tabs |
+
+## Troubleshooting
+
+If components do not become ready:
+
+```bash
+# Inspect DSC conditions and events
+oc describe datasciencecluster default-dsc
+
+# Check operator logs
+oc logs -n redhat-ods-operator deployment/rhods-operator --tail=100
+
+# Check pods in the applications namespace
+oc get pods -n redhat-ods-applications
+```
+
+## Next step
+
+Proceed to Phase 4 (04-maas-platform/) to deploy PostgreSQL and configure
+the MaaS platform infrastructure.
