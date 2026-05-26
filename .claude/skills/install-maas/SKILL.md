@@ -11,7 +11,7 @@ Install Models as a Service on an OpenShift cluster with RHOAI using this guide'
 
 ## Primary Entry Point
 
-**`./scripts/setup-maas.sh`** is the single orchestrator that handles the entire lifecycle — from operator installation through model deployment and verification. Each phase is idempotent; re-running skips what's already done.
+**`./scripts/setup-maas.sh`** is the single orchestrator that handles the entire lifecycle  - from operator installation through model deployment and verification. Each phase is idempotent; re-running skips what's already done.
 
 ```bash
 ./scripts/setup-maas.sh [OPTIONS]
@@ -30,14 +30,14 @@ Install Models as a Service on an OpenShift cluster with RHOAI using this guide'
 
 | Phase | What it does | Time |
 |-------|-------------|------|
-| 0 | Preflight — detect cluster state, decide which phases to run | instant |
-| 1 | Operators — `oc apply -k 01-prerequisites/operators/`, wait for CSVs | 2-5 min |
-| 2 | Platform — Kuadrant, UWM, GatewayClass, envsubst Gateway | 2-5 min |
-| 3 | RHOAI — DSC with modelsAsService: Managed, Dashboard flags | 3-5 min |
-| 4 | MaaS — PostgreSQL secrets/deployment, Authorino TLS, wait for maas-api | 3-5 min |
-| 5 | Model — auto-detect GPU, apply Kustomize, wait for Ready | 0.5-15 min |
-| 6 | Verify — 6-phase E2E (API, auth, rate limits, cleanup) | 3-5 min |
-| 7 | Observability — COO subscription + Gateway TelemetryPolicy | 2-3 min |
+| 0 | Preflight  - detect cluster state, decide which phases to run | instant |
+| 1 | Operators  - `oc apply -k 01-prerequisites/operators/`, wait for CSVs | 2-5 min |
+| 2 | Platform  - Kuadrant, UWM, GatewayClass, envsubst Gateway | 2-5 min |
+| 3 | RHOAI  - DSC with modelsAsService: Managed, Dashboard flags | 3-5 min |
+| 4 | MaaS  - PostgreSQL secrets/deployment, Authorino TLS, wait for maas-api | 3-5 min |
+| 5 | Model  - auto-detect GPU, apply Kustomize, wait for Ready | 0.5-15 min |
+| 6 | Verify  - 6-phase E2E (API, auth, rate limits, cleanup) | 3-5 min |
+| 7 | Observability  - COO subscription + Gateway TelemetryPolicy | 2-3 min |
 
 ## Instructions
 
@@ -99,8 +99,8 @@ These wrap individual phases for standalone use:
 
 | Script | What it does |
 |--------|-------------|
-| `scripts/deploy-model.sh` | Phase 5 only — deploy model with GPU auto-detection |
-| `scripts/verify-maas.sh` | Phase 6 only — wrapper for `06-verification/verify.sh` |
+| `scripts/deploy-model.sh` | Phase 5 only  - deploy model with GPU auto-detection |
+| `scripts/verify-maas.sh` | Phase 6 only  - wrapper for `06-verification/verify.sh` |
 
 ## State Detection
 
@@ -121,7 +121,7 @@ If a phase fails, the script reports what went wrong. Common fixes:
 - **Operator CSV stuck**: Check `oc get csv -A --no-headers | grep -v Succeeded`
 - **Gateway not Programmed**: Check `oc get gateway -n openshift-ingress -o yaml`
 - **maas-api not appearing**: Check `oc get datasciencecluster default-dsc -o jsonpath='{.status.conditions}'`
-- **Health endpoint 000**: DNS propagation for LoadBalancer — wait 2-5 minutes
+- **Health endpoint 000**: DNS propagation for LoadBalancer  - wait 2-5 minutes
 - **Model pods CrashLoopBackOff**: Check GPU resources with `oc describe pod -n llm`
 
 ## Final Report

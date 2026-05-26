@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# test-inference.sh — Quick smoke test for MaaS inference
+# test-inference.sh - Quick smoke test for MaaS inference
 #
 # Usage:
 #   ./scripts/test-inference.sh --api-key <key>

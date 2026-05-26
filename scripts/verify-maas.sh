@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-# Convenience wrapper — delegates to the canonical verification script
+# Convenience wrapper - delegates to the canonical verification script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 exec "$SCRIPT_DIR/../06-verification/verify.sh" "$@"

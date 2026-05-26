@@ -19,7 +19,7 @@ annotation, and the Gateway requires the GatewayClass to exist).
 ## Step 1: Kuadrant and Authorino
 
 Apply the namespace, service annotation, and Kuadrant CR. Do **not** apply the
-full kustomization in one shot — the Kuadrant operator auto-creates an Authorino
+full kustomization in one shot - the Kuadrant operator auto-creates an Authorino
 CR when it reconciles the Kuadrant resource, so the Authorino CR must be
 configured separately via `oc patch` after Kuadrant is ready.
 
@@ -46,7 +46,7 @@ oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=120
 
 ## Step 2: Configure TLS for Models-as-a-Service
 
-Follow [RHOAI 3.4 docs section 1.4](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas#configure-tls-for-maas_maas-deploy) — four steps to enable TLS between the Gateway and Authorino.
+Follow [RHOAI 3.4 docs section 1.4](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas#configure-tls-for-maas_maas-deploy), four steps to enable TLS between the Gateway and Authorino.
 
 **Step 2a:** The service annotation (already applied above) triggers the
 service-ca operator to generate the `authorino-server-cert` TLS Secret:

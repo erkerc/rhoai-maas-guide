@@ -3,16 +3,16 @@
 # setup-maas.sh - End-to-end MaaS (Models as a Service) deployment on RHOAI
 #
 # Orchestrates the full MaaS lifecycle from a bare OpenShift cluster:
-#   Phase 0: Preflight — detect cluster state, decide which phases to run
-#   Phase 1: Operators — install required operator subscriptions
-#   Phase 2: Platform config — Kuadrant, UWM, GatewayClass, Gateway
-#   Phase 3: RHOAI config — DataScienceCluster, DSCInitialization, Dashboard
-#   Phase 4: MaaS platform — PostgreSQL secrets/deployment, Authorino TLS
-#   Phase 5: Deploy model — auto-detect GPU, apply model Kustomize
-#   Phase 6: Verify — run 6-phase E2E verification
-#   Phase 7: Observability (optional) — COO + Gateway telemetry
+#   Phase 0: Preflight  - detect cluster state, decide which phases to run
+#   Phase 1: Operators  - install required operator subscriptions
+#   Phase 2: Platform config  - Kuadrant, UWM, GatewayClass, Gateway
+#   Phase 3: RHOAI config  - DataScienceCluster, DSCInitialization, Dashboard
+#   Phase 4: MaaS platform  - PostgreSQL secrets/deployment, Authorino TLS
+#   Phase 5: Deploy model  - auto-detect GPU, apply model Kustomize
+#   Phase 6: Verify  - run 6-phase E2E verification
+#   Phase 7: Observability (optional)  - COO + Gateway telemetry
 #
-# Each phase is idempotent — re-running skips what's already done.
+# Each phase is idempotent  - re-running skips what's already done.
 #
 # Usage:
 #   ./scripts/setup-maas.sh [OPTIONS]
@@ -68,7 +68,7 @@ Usage: setup-maas.sh [OPTIONS]
 
 End-to-end MaaS deployment on RHOAI 3.4. Runs all phases from operator
 installation through model deployment and verification. Each phase is
-idempotent — re-running skips what's already done.
+idempotent  - re-running skips what's already done.
 
 Options:
   --model <name>       Model: simulator, granite-tiny-gpu, gpt-oss-20b, auto (default: auto)
@@ -174,7 +174,7 @@ case "$PLATFORM_TYPE" in
 esac
 log_info "Platform type: ${PLATFORM_TYPE} (cloud LB: ${IS_CLOUD_PLATFORM})"
 
-# Note: avoid grep -q in pipelines — with pipefail, grep -q causes SIGPIPE (exit 141)
+# Note: avoid grep -q in pipelines  - with pipefail, grep -q causes SIGPIPE (exit 141)
 RHOAI_CSVS=$(oc get csv -n redhat-ods-operator --no-headers 2>/dev/null || true)
 echo "$RHOAI_CSVS" | grep rhods >/dev/null 2>&1 && HAS_RHOAI_CSV=true
 RHCL_CSVS=$(oc get csv -n openshift-operators --no-headers 2>/dev/null || true)
@@ -281,14 +281,14 @@ if should_run 2; then
                 KUADRANT_MSG=$(oc get kuadrant kuadrant -n kuadrant-system \
                     -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}' 2>/dev/null || echo "")
                 if echo "$KUADRANT_MSG" | grep -i "MissingDependency" >/dev/null 2>&1; then
-                    log_warn "Kuadrant reports MissingDependency (Istio race) — restarting operator pod..."
+                    log_warn "Kuadrant reports MissingDependency (Istio race)  - restarting operator pod..."
                     oc delete pod -n openshift-operators -l app.kubernetes.io/name=kuadrant-operator-controller-manager 2>/dev/null || \
                         oc delete pod -n openshift-operators -l control-plane=controller-manager 2>/dev/null || \
                         oc delete pod -n openshift-operators $(oc get pods -n openshift-operators --no-headers 2>/dev/null | grep kuadrant-operator | awk '{print $1}' | head -1) 2>/dev/null || true
                     log_info "Operator pod restarted, waiting for Kuadrant Ready..."
                 fi
                 oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=180s 2>/dev/null || \
-                    { log_error "Kuadrant did not become Ready — check: oc get kuadrant kuadrant -n kuadrant-system -o yaml"; exit 1; }
+                    { log_error "Kuadrant did not become Ready  - check: oc get kuadrant kuadrant -n kuadrant-system -o yaml"; exit 1; }
             fi
             log_info "Kuadrant: Ready"
         else
@@ -333,7 +333,7 @@ if should_run 2; then
     else
         log_step "Enabling User Workload Monitoring (REQUIRED for MaaS)..."
         run_cmd oc apply -k "$GUIDE_DIR/02-platform-config/uwm/"
-        log_info "UWM configured — prometheus-user-workload pods will start shortly"
+        log_info "UWM configured  - prometheus-user-workload pods will start shortly"
     fi
 
     # Step 3: GatewayClass
@@ -373,7 +373,7 @@ if should_run 2; then
 
                     # Non-cloud clusters need MetalLB to provision LB IPs
                     if [ "$IS_CLOUD_PLATFORM" = false ]; then
-                        log_step "Non-cloud platform detected — installing MetalLB..."
+                        log_step "Non-cloud platform detected  - installing MetalLB..."
 
                         if [ "$HAS_METALLB" = false ]; then
                             log_info "Installing MetalLB operator..."
@@ -433,7 +433,7 @@ if should_run 2; then
                     if [ -f "$ROUTE_TMPL" ]; then
                         export CLUSTER_DOMAIN
                         envsubst '${CLUSTER_DOMAIN}' < "$ROUTE_TMPL" | oc apply -f -
-                        log_info "Route maas-default-gateway-https created — traffic routed via OpenShift ingress"
+                        log_info "Route maas-default-gateway-https created  - traffic routed via OpenShift ingress"
                     else
                         log_warn "Route template not found: $ROUTE_TMPL"
                     fi
@@ -487,7 +487,7 @@ if should_run 3; then
             if oc get crd maasmodelrefs.maas.opendatahub.io &>/dev/null; then
                 log_info "MaaS CRDs registered"
             else
-                log_warn "MaaS CRDs not yet registered — operator may still be reconciling"
+                log_warn "MaaS CRDs not yet registered  - operator may still be reconciling"
             fi
         fi
 
@@ -585,7 +585,7 @@ if should_run 4; then
                 log_info "Still waiting for maas-api... (${ELAPSED}s)"
             fi
         done
-        [ $ELAPSED -ge $TIMEOUT ] && log_warn "maas-api not found after ${TIMEOUT}s — operator may still be reconciling"
+        [ $ELAPSED -ge $TIMEOUT ] && log_warn "maas-api not found after ${TIMEOUT}s  - operator may still be reconciling"
     fi
 
     # Step 5: Verify Tenant CR
@@ -713,7 +713,7 @@ if should_run 6 && [ "$SKIP_VERIFY" = false ]; then
         log_info "[DRY RUN] Would run: $VERIFY_SCRIPT"
     else
         log_info "Running E2E verification..."
-        "$VERIFY_SCRIPT" || log_warn "Verification had failures — check output above"
+        "$VERIFY_SCRIPT" || log_warn "Verification had failures  - check output above"
     fi
 fi
 
@@ -760,7 +760,7 @@ MAAS_URL="https://maas.${CLUSTER_DOMAIN}"
 
 if [ "$DRY_RUN" = true ]; then
     log_info "MaaS API URL:  ${MAAS_URL}"
-    log_info "Status:        DRY RUN — no changes applied"
+    log_info "Status:        DRY RUN  - no changes applied"
 else
     # Gather final state
     RHOAI_VERSION=$(oc get csv -n redhat-ods-operator --no-headers 2>/dev/null | grep rhods | awk '{print $2}' || echo "unknown")
