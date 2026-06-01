@@ -45,7 +45,7 @@ Each model deployment creates the following CRDs under `maas.opendatahub.io/v1al
 
 === LLMInferenceService (namespace: `llm`)
 
-Defines the inference workload -- the container, model weights, resource requests, health probes, and gateway routing. This is the actual serving pod that handles inference requests.
+Defines the inference workload: the container, model weights, resource requests, health probes, and gateway routing. This is the actual serving pod that handles inference requests.
 
 === MaaSModelRef (namespace: `llm`)
 

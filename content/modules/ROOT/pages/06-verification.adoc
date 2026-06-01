@@ -6,12 +6,12 @@ End-to-end verification of a MaaS ({maas}) deployment on {ocp-short}.
 
 The `verify.sh` script runs 6 phases:
 
-. *Infrastructure health* -- Checks Gateway, PostgreSQL, maas-api, maas-controller, Authorino, DSC readiness, and the `/maas-api/health` endpoint.
-. *Deploy simulator model* -- Creates a temporary CPU-only simulator (LLMInferenceService, MaaSModelRef, MaaSAuthPolicy, MaaSSubscription) and waits for it to become Ready.
-. *API verification* -- Creates an API key, lists available models, and sends a chat completion inference request.
-. *Auth enforcement* -- Sends requests with no token and an invalid token, verifying both are rejected (HTTP 401/403).
-. *Rate limiting* -- Fires 16 rapid requests to trigger the 100 tokens/min rate limit and confirms HTTP 429 responses.
-. *Cleanup* -- Removes all temporary test resources (API key, MaaS CRs, simulator pods, namespaces if empty).
+. *Infrastructure health* - checks Gateway, PostgreSQL, maas-api, maas-controller, Authorino, DSC readiness, and the `/maas-api/health` endpoint.
+. *Deploy simulator model* - creates a temporary CPU-only simulator (LLMInferenceService, MaaSModelRef, MaaSAuthPolicy, MaaSSubscription) and waits for it to become Ready.
+. *API verification* - creates an API key, lists available models, and sends a chat completion inference request.
+. *Auth enforcement* - sends requests with no token and an invalid token, verifying both are rejected (HTTP 401/403).
+. *Rate limiting* - fires 16 rapid requests to trigger the 100 tokens/min rate limit and confirms HTTP 429 responses.
+. *Cleanup* - removes all temporary test resources (API key, MaaS CRs, simulator pods, namespaces if empty).
 
 == Prerequisites
 

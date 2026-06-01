@@ -12,7 +12,7 @@ Apply each step in order and wait for the status gates before proceeding to the 
 
 == Step 1: Kuadrant and Authorino
 
-Apply the namespace, service annotation, and Kuadrant CR. Do *not* apply the full kustomization in one shot -- the Kuadrant operator auto-creates an Authorino CR when it reconciles the Kuadrant resource, so the Authorino CR must be configured separately via `oc patch` after Kuadrant is ready.
+Apply the namespace, service annotation, and Kuadrant CR. Do *not* apply the full kustomization in one shot. The Kuadrant operator auto-creates an Authorino CR when it reconciles the Kuadrant resource, so the Authorino CR must be configured separately via `oc patch` after Kuadrant is ready.
 
 [source,bash]
 ----

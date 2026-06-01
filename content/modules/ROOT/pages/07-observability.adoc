@@ -4,9 +4,9 @@ NOTE: User Workload Monitoring (UWM) was already configured in xref:02-platform-
 
 This phase adds *optional* observability enhancements on top of UWM:
 
-. *Cluster Observability Operator (COO)* -- required for the Observability Dashboard tab in the {rhoai} UI. COO provides the Perses CRDs (`Perses`, `PersesDatasource`, `PersesDashboard`) that the RHOAI operator uses to deploy the dashboard backend.
+. *Cluster Observability Operator (COO)* - required for the Observability Dashboard tab in the {rhoai} UI. COO provides the Perses CRDs (`Perses`, `PersesDatasource`, `PersesDashboard`) that the RHOAI operator uses to deploy the dashboard backend.
 
-. *Gateway Telemetry* -- per-model, per-user, per-subscription usage metrics on the MaaS gateway. Adds fine-grained labels (`model`, `user`, `subscription`, `organization_id`, `cost_center`) to gateway metrics for usage attribution and billing.
+. *Gateway Telemetry* - per-model, per-user, per-subscription usage metrics on the MaaS gateway. Adds fine-grained labels (`model`, `user`, `subscription`, `organization_id`, `cost_center`) to gateway metrics for usage attribution and billing.
 
 == Step 1: Install the Cluster Observability Operator
 

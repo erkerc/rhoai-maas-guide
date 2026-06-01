@@ -12,11 +12,11 @@ TIP: All file paths and `oc apply` commands in this guide are relative to the li
 
 | Red Hat OpenShift AI (`rhods-operator`)
 | `redhat-ods-operator`
-| Core RHOAI platform -- model serving, dashboards, pipelines
+| Core RHOAI platform, model serving, dashboards, pipelines
 
 | Red Hat Connectivity Link (`rhcl-operator`)
 | `openshift-operators`
-| API gateway policies -- authentication (Authorino) and rate limiting (Limitador) for MaaS endpoints
+| API gateway policies, authentication (Authorino) and rate limiting (Limitador) for MaaS endpoints
 
 | cert-manager (`openshift-cert-manager-operator`)
 | `cert-manager-operator`

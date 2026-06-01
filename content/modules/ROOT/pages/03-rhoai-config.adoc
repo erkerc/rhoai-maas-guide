@@ -94,10 +94,10 @@ oc get odhdashboardconfig odh-dashboard-config -n redhat-ods-applications \
 
 Verify the following flags are set:
 
-* `modelAsService: true` -- enables the Models as a Service tab
-* `genAiStudio: true` -- enables the GenAI Studio tab (requires llamastackoperator Managed)
-* `maasAuthPolicies: true` -- enables MaaS auth policy management in the UI
-* `observabilityDashboard: true` -- enables the Observability tab (requires COO + monitoring configured)
+* `modelAsService: true` - enables the Models as a Service tab
+* `genAiStudio: true` - enables the GenAI Studio tab (requires llamastackoperator Managed)
+* `maasAuthPolicies: true` - enables MaaS auth policy management in the UI
+* `observabilityDashboard: true` - enables the Observability tab (requires COO + monitoring configured)
 
 == What this creates
 

@@ -12,10 +12,10 @@ Deploy the PostgreSQL database and configure Authorino TLS for the MaaS platform
 
 The MaaS platform requires:
 
-. *PostgreSQL database* -- stores API key metadata (hashed tokens, subscription bindings, expiration, revocation state). maas-api crash-loops until the DB is reachable and schema migration completes.
-. *PostgreSQL secrets* -- `postgres-creds` (DB credentials) and `maas-db-config` (connection URL consumed by maas-api).
-. *MaaS Gateway* -- Gateway API resource for inference traffic routing.
-. *Authorino TLS* -- TLS configuration between the Gateway and Authorino for auth policy enforcement.
+. *PostgreSQL database* - stores API key metadata (hashed tokens, subscription bindings, expiration, revocation state). maas-api crash-loops until the DB is reachable and schema migration completes.
+. *PostgreSQL secrets* - `postgres-creds` (DB credentials) and `maas-db-config` (connection URL consumed by maas-api).
+. *MaaS Gateway* - Gateway API resource for inference traffic routing.
+. *Authorino TLS* - TLS configuration between the Gateway and Authorino for auth policy enforcement.
 
 == Quick start (automated)
 

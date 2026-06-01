@@ -80,7 +80,7 @@ Each phase has step-by-step instructions, status gates, and troubleshooting.
 
 == Quick Start
 
-A single script runs all phases end-to-end. Each phase is idempotent -- re-running skips what is already done.
+A single script runs all phases end-to-end. Each phase is idempotent, re-running skips what is already done.
 
 [source,bash]
 ----
