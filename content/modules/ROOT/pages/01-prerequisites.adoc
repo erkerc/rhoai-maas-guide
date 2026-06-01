@@ -2,6 +2,8 @@
 
 Install the operator subscriptions required by {rhoai} 3.4 {maas}.
 
+TIP: All file paths and `oc apply` commands in this guide are relative to the link:{repo-url}[rhoai-maas-guide] repository root. Make sure you have cloned it and are working from its root directory (see xref:index.adoc#_getting_started[Getting Started]).
+
 == Operator Overview
 
 [cols="1,1,3", options="header"]

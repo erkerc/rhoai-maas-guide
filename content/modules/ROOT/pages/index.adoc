@@ -10,6 +10,21 @@ Requires OpenShift 4.19+ with cluster-admin access.
 
 IMPORTANT: This guide is not a replacement for the link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html-single/govern_llm_access_with_models-as-a-service/index[official {rhoai} 3.4 {maas} documentation]. It is a companion resource with opinionated Kustomize manifests and automation scripts to accelerate deployment.
 
+== Getting Started
+
+Clone the repository and work from its root directory. All commands and file paths in this guide are relative to the cloned repo.
+
+[source,bash]
+----
+git clone {repo-url}.git
+cd rhoai-maas-guide
+----
+
+You also need:
+
+* {ocp-short} 4.19+ cluster with `oc` CLI authenticated as cluster-admin
+* `envsubst`, `curl`, `jq` available on PATH
+
 == Phases
 
 Each phase has step-by-step instructions, status gates, and troubleshooting.

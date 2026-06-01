@@ -14,3 +14,4 @@ asciidoc:
     ocp: "OpenShift Container Platform"
     ocp-short: "OpenShift"
     maas: "Models as a Service"
+    repo-url: "https://github.com/rh-aiservices-bu/rhoai-maas-guide"
