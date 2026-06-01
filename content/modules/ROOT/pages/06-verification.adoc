@@ -24,13 +24,13 @@ The `verify.sh` script runs 6 phases:
 [source,bash]
 ----
 # Full verification (deploy, test, cleanup)
-./06-verification/verify.sh
+./manifests/06-verification/verify.sh
 
 # Keep test resources after verification
-./06-verification/verify.sh --no-cleanup
+./manifests/06-verification/verify.sh --no-cleanup
 
 # Remove leftover test resources from a previous run
-./06-verification/verify.sh --cleanup-only
+./manifests/06-verification/verify.sh --cleanup-only
 ----
 
 == Expected output

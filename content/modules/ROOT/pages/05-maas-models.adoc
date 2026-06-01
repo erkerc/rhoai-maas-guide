@@ -96,7 +96,7 @@ Deploy the simulator (no GPU required):
 
 [source,bash]
 ----
-oc apply -k 05-maas-models/simulator/
+oc apply -k manifests/05-maas-models/simulator/
 ----
 
 Or deploy a GPU model if your cluster has NVIDIA GPUs:
@@ -104,10 +104,10 @@ Or deploy a GPU model if your cluster has NVIDIA GPUs:
 [source,bash]
 ----
 # For clusters with modest GPU (8GB+ VRAM)
-oc apply -k 05-maas-models/granite-tiny-gpu/
+oc apply -k manifests/05-maas-models/granite-tiny-gpu/
 
 # For clusters with larger GPU (16GB+ VRAM, A10G or better)
-oc apply -k 05-maas-models/gpt-oss-20b/
+oc apply -k manifests/05-maas-models/gpt-oss-20b/
 ----
 
 == Verifying Model Readiness
@@ -172,7 +172,7 @@ For GPU models, replace the model name with `granite-4-tiny` or `gpt-oss-20b` as
 
 [source,bash]
 ----
-oc delete -k 05-maas-models/simulator/
+oc delete -k manifests/05-maas-models/simulator/
 ----
 
 == Further Reading

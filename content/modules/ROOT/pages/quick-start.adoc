@@ -55,7 +55,7 @@ This runs Phases 0-6 automatically. The script detects what's already installed 
 | instant
 
 | 1
-| Operators - `oc apply -k 01-prerequisites/operators/`, wait for CSVs
+| Operators - `oc apply -k manifests/01-prerequisites/operators/`, wait for CSVs
 | 2-5 min
 
 | 2
@@ -137,7 +137,7 @@ Or directly:
 
 [source,bash]
 ----
-./06-verification/verify.sh
+./manifests/06-verification/verify.sh
 ----
 
 == Convenience Scripts
@@ -155,7 +155,7 @@ These wrap individual phases for standalone use:
 | Send inference requests to a deployed model endpoint
 
 | `scripts/verify-maas.sh`
-| Phase 6 only - wrapper for `06-verification/verify.sh`
+| Phase 6 only - wrapper for `manifests/manifests/06-verification/verify.sh`
 |===
 
 == State Detection

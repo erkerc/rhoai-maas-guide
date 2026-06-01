@@ -22,8 +22,8 @@ On a fresh install, apply in two stages. The `OdhDashboardConfig` CRD does not e
 [source,bash]
 ----
 # Stage 1: DSC and DSCI (triggers operator reconciliation)
-oc apply -f 03-rhoai-config/dscinitialization.yaml
-oc apply -f 03-rhoai-config/datasciencecluster.yaml
+oc apply -f manifests/03-rhoai-config/dscinitialization.yaml
+oc apply -f manifests/03-rhoai-config/datasciencecluster.yaml
 ----
 
 Wait for the operator to reconcile and register all CRDs (see Verify section below), then apply the dashboard config:
@@ -31,10 +31,10 @@ Wait for the operator to reconcile and register all CRDs (see Verify section bel
 [source,bash]
 ----
 # Stage 2: Dashboard config (requires OdhDashboardConfig CRD to exist)
-oc apply -f 03-rhoai-config/odh-dashboard-config.yaml
+oc apply -f manifests/03-rhoai-config/odh-dashboard-config.yaml
 ----
 
-On subsequent runs (CRDs already exist), `oc apply -k 03-rhoai-config/` works in one shot.
+On subsequent runs (CRDs already exist), `oc apply -k manifests/03-rhoai-config/` works in one shot.
 
 == Verify
 

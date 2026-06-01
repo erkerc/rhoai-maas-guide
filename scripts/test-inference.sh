@@ -3,9 +3,9 @@
 # test-inference.sh - Quick smoke test for MaaS inference
 #
 # Usage:
-#   ./scripts/test-inference.sh --api-key <key>
-#   ./scripts/test-inference.sh --api-key <key> --model facebook/opt-125m --prompt "What is AI?"
-#   ./scripts/test-inference.sh --api-key <key> --max-tokens 100 --endpoint completions
+#   ./scripts/test-inference.sh --base-url <url> --api-key <key>
+#   ./scripts/test-inference.sh --base-url https://maas.apps.cluster.example.com/llm/model-name --api-key <key>
+#   ./scripts/test-inference.sh --base-url <url> --api-key <key> --model facebook/opt-125m --prompt "What is AI?"
 #
 
 set -euo pipefail
@@ -15,49 +15,43 @@ PROMPT="Hello, how are you?"
 MAX_TOKENS=50
 ENDPOINT="chat/completions"
 API_KEY=""
-MAAS_NS="llm"
+BASE_URL=""
 
 usage() {
     sed -n '3,9p' "$0" | sed 's/^# \{0,1\}//'
     echo ""
     echo "Options:"
+    echo "  --base-url URL      (required) MaaS base URL (e.g. https://maas.apps.cluster.example.com/llm/model-name)"
     echo "  --api-key KEY       (required) MaaS API key"
     echo "  --model MODEL       vLLM model ID (default: $MODEL)"
     echo "  --prompt TEXT       Prompt text (default: \"$PROMPT\")"
     echo "  --max-tokens N      Max tokens to generate (default: $MAX_TOKENS)"
     echo "  --endpoint TYPE     completions | chat/completions (default: $ENDPOINT)"
-    echo "  --namespace NS      LLMInferenceService namespace (default: $MAAS_NS)"
     echo "  --list-models       List available models and exit"
     exit 0
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --base-url)     BASE_URL="$2"; shift 2 ;;
         --api-key)      API_KEY="$2"; shift 2 ;;
         --model)        MODEL="$2"; shift 2 ;;
         --prompt)       PROMPT="$2"; shift 2 ;;
         --max-tokens)   MAX_TOKENS="$2"; shift 2 ;;
         --endpoint)     ENDPOINT="$2"; shift 2 ;;
-        --namespace)    MAAS_NS="$2"; shift 2 ;;
         --list-models)  LIST_MODELS=true; shift ;;
         -h|--help)      usage ;;
         *)              echo "Unknown option: $1"; usage ;;
     esac
 done
 
-CLUSTER_DOMAIN=$(oc get ingresses.config/cluster -o jsonpath='{.spec.domain}' 2>/dev/null)
-if [[ -z "$CLUSTER_DOMAIN" ]]; then
-    echo "ERROR: Cannot detect cluster domain. Are you logged in?" >&2
+BASE_URL="${BASE_URL%/}"
+
+if [[ -z "$BASE_URL" ]]; then
+    echo "ERROR: --base-url is required" >&2
+    echo "Usage: $0 --base-url <url> --api-key <key>" >&2
     exit 1
 fi
-
-LLMIS_NAME=$(oc get llminferenceservice -n "$MAAS_NS" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-if [[ -z "$LLMIS_NAME" ]]; then
-    echo "ERROR: No LLMInferenceService found in namespace '$MAAS_NS'" >&2
-    exit 1
-fi
-
-BASE_URL="https://maas.${CLUSTER_DOMAIN}/llm/${LLMIS_NAME}"
 
 if [[ "${LIST_MODELS:-}" == "true" ]]; then
     if [[ -z "$API_KEY" ]]; then
@@ -72,7 +66,7 @@ fi
 
 if [[ -z "$API_KEY" ]]; then
     echo "ERROR: --api-key is required" >&2
-    echo "Usage: $0 --api-key <key>" >&2
+    echo "Usage: $0 --base-url <url> --api-key <key>" >&2
     exit 1
 fi
 

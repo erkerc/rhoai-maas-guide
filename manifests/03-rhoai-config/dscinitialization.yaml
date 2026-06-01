@@ -9,7 +9,7 @@ spec:
   # triggers the operator's full observability cascade (MonitoringStack,
   # ThanosQuerier, Perses, Tempo, OpenTelemetryCollector DaemonSet,
   # NodeMetricsEndpoint). That cascade is applied separately in Phase 7
-  # (07-observability/) after a settle-gate confirms the cluster can handle it.
+  # (manifests/07-observability/) after a settle-gate confirms the cluster can handle it.
   monitoring:
     managementState: Managed
   trustedCABundle:

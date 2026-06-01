@@ -31,6 +31,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GUIDE_DIR="$SCRIPT_DIR/.."
+MANIFESTS_DIR="$GUIDE_DIR/manifests"
 NAMESPACE=redhat-ods-applications
 
 # Colors
@@ -235,7 +236,7 @@ if should_run 1; then
         log_info "Required operators already installed, skipping"
     else
         log_info "Applying operator subscriptions..."
-        run_cmd oc apply -k "$GUIDE_DIR/01-prerequisites/operators/"
+        run_cmd oc apply -k "$MANIFESTS_DIR/01-prerequisites/operators/"
         log_info "Operator subscriptions applied"
 
         log_info "Waiting for operator CSVs (this may take 2-5 minutes)..."
@@ -270,11 +271,11 @@ if should_run 2; then
         log_info "Kuadrant already configured, skipping"
     else
         log_step "Creating kuadrant-system namespace and service annotation..."
-        run_cmd oc apply -f "$GUIDE_DIR/02-platform-config/kuadrant/namespace.yaml"
-        run_cmd oc apply -f "$GUIDE_DIR/02-platform-config/kuadrant/service-annotation.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/02-platform-config/kuadrant/namespace.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/02-platform-config/kuadrant/service-annotation.yaml"
 
         log_step "Creating Kuadrant CR..."
-        run_cmd oc apply -f "$GUIDE_DIR/02-platform-config/kuadrant/kuadrant.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/02-platform-config/kuadrant/kuadrant.yaml"
 
         if [ "$DRY_RUN" = false ]; then
             if ! oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=60s 2>/dev/null; then
@@ -332,7 +333,7 @@ if should_run 2; then
         log_info "User Workload Monitoring already enabled, skipping"
     else
         log_step "Enabling User Workload Monitoring (REQUIRED for MaaS)..."
-        run_cmd oc apply -k "$GUIDE_DIR/02-platform-config/uwm/"
+        run_cmd oc apply -k "$MANIFESTS_DIR/02-platform-config/uwm/"
         log_info "UWM configured  - prometheus-user-workload pods will start shortly"
     fi
 
@@ -341,7 +342,7 @@ if should_run 2; then
         log_info "GatewayClass openshift-default already exists, skipping"
     else
         log_step "Creating GatewayClass..."
-        run_cmd oc apply -f "$GUIDE_DIR/02-platform-config/gatewayclass.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/02-platform-config/gatewayclass.yaml"
         wait_for "GatewayClass accepted" 60 \
             oc wait gatewayclass openshift-default \
             --for=jsonpath='{.status.conditions[?(@.type=="Accepted")].status}'=True
@@ -352,7 +353,7 @@ if should_run 2; then
         log_info "Gateway maas-default-gateway already exists, skipping"
     else
         log_step "Rendering and applying Gateway..."
-        GATEWAY_TEMPLATE="$GUIDE_DIR/02-platform-config/gateway.yaml.tmpl"
+        GATEWAY_TEMPLATE="$MANIFESTS_DIR/02-platform-config/gateway.yaml.tmpl"
         if [ ! -f "$GATEWAY_TEMPLATE" ]; then
             log_error "Gateway template not found: $GATEWAY_TEMPLATE"
             exit 1
@@ -377,7 +378,7 @@ if should_run 2; then
 
                         if [ "$HAS_METALLB" = false ]; then
                             log_info "Installing MetalLB operator..."
-                            oc apply -k "$GUIDE_DIR/01-prerequisites/metallb/"
+                            oc apply -k "$MANIFESTS_DIR/01-prerequisites/metallb/"
                             log_info "Waiting for MetalLB CSV..."
                             METALLB_TIMEOUT=120
                             METALLB_ELAPSED=0
@@ -399,7 +400,7 @@ if should_run 2; then
                         # Create MetalLB CR if needed
                         if ! oc get metallb metallb -n metallb-system &>/dev/null; then
                             log_info "Creating MetalLB CR..."
-                            oc apply -f "$GUIDE_DIR/01-prerequisites/metallb/metallb.yaml"
+                            oc apply -f "$MANIFESTS_DIR/01-prerequisites/metallb/metallb.yaml"
                             oc wait --for=jsonpath='{.status.conditions[?(@.type=="Available")].status}'=True \
                                 metallb/metallb -n metallb-system --timeout=120s 2>/dev/null || \
                                 log_warn "MetalLB CR did not become Available"
@@ -412,7 +413,7 @@ if should_run 2; then
                                 METALLB_IP_RANGE="192.168.1.240-192.168.1.240"
                                 log_info "Creating MetalLB IPAddressPool: ${METALLB_IP_RANGE}"
                                 export METALLB_IP_RANGE
-                                envsubst '${METALLB_IP_RANGE}' < "$GUIDE_DIR/04-maas-platform/openshift-gateway-setup/metallb-config.yaml" | oc apply -f -
+                                envsubst '${METALLB_IP_RANGE}' < "$MANIFESTS_DIR/04-maas-platform/openshift-gateway-setup/metallb-config.yaml" | oc apply -f -
                             else
                                 log_warn "Cannot detect node IP for MetalLB pool"
                             fi
@@ -429,7 +430,7 @@ if should_run 2; then
 
                     # Create passthrough Route as fallback (works for both MetalLB and non-MetalLB)
                     log_info "Creating passthrough Route as fallback..."
-                    ROUTE_TMPL="$GUIDE_DIR/04-maas-platform/openshift-gateway-setup/route.yaml.tmpl"
+                    ROUTE_TMPL="$MANIFESTS_DIR/04-maas-platform/openshift-gateway-setup/route.yaml.tmpl"
                     if [ -f "$ROUTE_TMPL" ]; then
                         export CLUSTER_DOMAIN
                         envsubst '${CLUSTER_DOMAIN}' < "$ROUTE_TMPL" | oc apply -f -
@@ -469,8 +470,8 @@ if should_run 3; then
         log_info "DSC already has modelsAsService: Managed, skipping"
     else
         log_step "Applying DSC and DSCI..."
-        run_cmd oc apply -f "$GUIDE_DIR/03-rhoai-config/dscinitialization.yaml"
-        run_cmd oc apply -f "$GUIDE_DIR/03-rhoai-config/datasciencecluster.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/03-rhoai-config/dscinitialization.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/03-rhoai-config/datasciencecluster.yaml"
         log_info "DSC/DSCI applied"
 
         if [ "$DRY_RUN" = false ]; then
@@ -492,7 +493,7 @@ if should_run 3; then
         fi
 
         log_step "Applying OdhDashboardConfig..."
-        run_cmd oc apply -f "$GUIDE_DIR/03-rhoai-config/odh-dashboard-config.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/03-rhoai-config/odh-dashboard-config.yaml"
         log_info "Dashboard config applied"
     fi
 fi
@@ -525,7 +526,7 @@ if should_run 4; then
     if [ "$HAS_POSTGRES" = true ]; then
         log_info "PostgreSQL already deployed, skipping"
     else
-        run_cmd oc apply -k "$GUIDE_DIR/04-maas-platform/"
+        run_cmd oc apply -k "$MANIFESTS_DIR/04-maas-platform/"
         wait_for "PostgreSQL available" 120 \
             oc wait --for=condition=Available deployment/postgres -n "$NAMESPACE"
     fi
@@ -537,7 +538,7 @@ if should_run 4; then
         if [ "$DRY_RUN" = true ]; then
             log_info "[DRY RUN] envsubst < gateway.yaml.tmpl | oc apply -f -"
         else
-            envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < "$GUIDE_DIR/02-platform-config/gateway.yaml.tmpl" | oc apply -f -
+            envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < "$MANIFESTS_DIR/02-platform-config/gateway.yaml.tmpl" | oc apply -f -
         fi
     fi
     # Ensure Authorino TLS is configured (may have been done in Phase 2)
@@ -647,7 +648,7 @@ if should_run 5 && [ "$SKIP_MODELS" = false ]; then
             exit 1
         fi
 
-        MODEL_DIR="$GUIDE_DIR/05-maas-models/$MODEL"
+        MODEL_DIR="$MANIFESTS_DIR/05-maas-models/$MODEL"
         if [ ! -d "$MODEL_DIR" ]; then
             log_error "Model directory not found: $MODEL_DIR"
             exit 1
@@ -706,7 +707,7 @@ fi
 if should_run 6 && [ "$SKIP_VERIFY" = false ]; then
     log_phase 6 "Verify"
 
-    VERIFY_SCRIPT="$GUIDE_DIR/06-verification/verify.sh"
+    VERIFY_SCRIPT="$MANIFESTS_DIR/06-verification/verify.sh"
     if [ ! -x "$VERIFY_SCRIPT" ]; then
         log_error "Verification script not found or not executable: $VERIFY_SCRIPT"
     elif [ "$DRY_RUN" = true ]; then
@@ -725,7 +726,7 @@ if should_run 7 && [ "$WITH_OBSERVABILITY" = true ]; then
 
     # COO
     log_step "Installing Cluster Observability Operator..."
-    run_cmd oc apply -k "$GUIDE_DIR/07-observability/coo/"
+    run_cmd oc apply -k "$MANIFESTS_DIR/07-observability/coo/"
     if [ "$DRY_RUN" = false ]; then
         log_info "Waiting for COO CSV..."
         TIMEOUT=300
@@ -746,7 +747,7 @@ if should_run 7 && [ "$WITH_OBSERVABILITY" = true ]; then
 
     # Telemetry
     log_step "Applying Gateway telemetry..."
-    run_cmd oc apply -k "$GUIDE_DIR/07-observability/telemetry/"
+    run_cmd oc apply -k "$MANIFESTS_DIR/07-observability/telemetry/"
     log_info "Gateway telemetry applied"
 fi
 

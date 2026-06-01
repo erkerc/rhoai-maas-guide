@@ -56,16 +56,16 @@ Apply the PostgreSQL manifests using Kustomize:
 
 [source,bash]
 ----
-oc apply -k 04-maas-platform/
+oc apply -k manifests/04-maas-platform/
 ----
 
 Or apply individually:
 
 [source,bash]
 ----
-oc apply -f 04-maas-platform/postgres-pvc.yaml
-oc apply -f 04-maas-platform/postgres-service.yaml
-oc apply -f 04-maas-platform/postgres-deployment.yaml
+oc apply -f manifests/04-maas-platform/postgres-pvc.yaml
+oc apply -f manifests/04-maas-platform/postgres-service.yaml
+oc apply -f manifests/04-maas-platform/postgres-deployment.yaml
 ----
 
 === Step 3: Create the MaaS Gateway

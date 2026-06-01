@@ -16,9 +16,9 @@ Apply the namespace, service annotation, and Kuadrant CR. Do *not* apply the ful
 
 [source,bash]
 ----
-oc apply -f 02-platform-config/kuadrant/namespace.yaml
-oc apply -f 02-platform-config/kuadrant/service-annotation.yaml
-oc apply -f 02-platform-config/kuadrant/kuadrant.yaml
+oc apply -f manifests/02-platform-config/kuadrant/namespace.yaml
+oc apply -f manifests/02-platform-config/kuadrant/service-annotation.yaml
+oc apply -f manifests/02-platform-config/kuadrant/kuadrant.yaml
 ----
 
 Wait for Kuadrant to become ready:
@@ -91,7 +91,7 @@ Enable User Workload Monitoring so that Prometheus scrapes MaaS and Kuadrant met
 
 [source,bash]
 ----
-oc apply -k 02-platform-config/uwm/
+oc apply -k manifests/02-platform-config/uwm/
 ----
 
 Wait for the user-workload monitoring stack to start:
@@ -117,7 +117,7 @@ Apply the GatewayClass that initializes OpenShift's built-in Gateway API control
 
 [source,bash]
 ----
-oc apply -f 02-platform-config/gatewayclass.yaml
+oc apply -f manifests/02-platform-config/gatewayclass.yaml
 ----
 
 Wait for the GatewayClass to be accepted:
@@ -163,7 +163,7 @@ Render and apply:
 
 [source,bash]
 ----
-envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < 02-platform-config/gateway.yaml.tmpl | oc apply -f -
+envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < manifests/02-platform-config/gateway.yaml.tmpl | oc apply -f -
 ----
 
 *Step 2d:* Annotate the Gateway for Authorino TLS bootstrap (docs section 1.4, step 4):
@@ -192,7 +192,7 @@ Additionally, create a passthrough Route to make the Gateway reachable via the c
 
 [source,bash]
 ----
-envsubst '${CLUSTER_DOMAIN}' < 04-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
+envsubst '${CLUSTER_DOMAIN}' < manifests/04-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
 ----
 
 This routes traffic through the existing OpenShift ingress controller.

@@ -19,7 +19,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODELS_DIR="$SCRIPT_DIR/../05-maas-models"
+MODELS_DIR="$SCRIPT_DIR/../manifests/05-maas-models"
 
 # Colors
 GREEN='\033[0;32m'
@@ -131,7 +131,7 @@ log_info "Selected model: $MODEL"
 # =============================================================================
 log_step "Deploying model: $MODEL"
 
-log_info "Applying manifests from 05-maas-models/$MODEL/..."
+log_info "Applying manifests from manifests/05-maas-models/$MODEL/..."
 run_cmd oc apply -k "$MODEL_DIR/"
 log_info "Model manifests applied"
 
@@ -141,7 +141,7 @@ if [ "$DRY_RUN" = true ]; then
     log_info "Model Deployment Summary (DRY RUN)"
     log_info "========================================="
     log_info "Model:     $MODEL"
-    log_info "Directory: 05-maas-models/$MODEL/"
+    log_info "Directory: manifests/05-maas-models/$MODEL/"
     log_info "========================================="
     exit 0
 fi

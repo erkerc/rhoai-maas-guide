@@ -12,7 +12,7 @@ This phase adds *optional* observability enhancements on top of UWM:
 
 [source,bash]
 ----
-oc apply -k 07-observability/coo/
+oc apply -k manifests/07-observability/coo/
 ----
 
 Wait for the operator CSV to reach `Succeeded`:
@@ -28,7 +28,7 @@ Once COO is installed and the MaaS gateway is running:
 
 [source,bash]
 ----
-oc apply -k 07-observability/telemetry/
+oc apply -k manifests/07-observability/telemetry/
 ----
 
 == Verification

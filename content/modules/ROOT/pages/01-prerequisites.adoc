@@ -77,7 +77,7 @@ All commands in this guide are run from the repository root.
 
 [source,bash]
 ----
-oc apply -k 01-prerequisites/operators/
+oc apply -k manifests/01-prerequisites/operators/
 ----
 
 This installs all five required operator subscriptions. OLM will resolve and install each operator automatically.
@@ -88,7 +88,7 @@ If your cluster has GPU nodes (or you plan to add them), install the GPU operato
 
 [source,bash]
 ----
-oc apply -k 01-prerequisites/gpu/
+oc apply -k manifests/01-prerequisites/gpu/
 ----
 
 === Step 3 (Optional): Install MetalLB for Non-Cloud Clusters
@@ -97,7 +97,7 @@ If your cluster is baremetal, OpenStack, or a RHPDS/SNO environment (no cloud LB
 
 [source,bash]
 ----
-oc apply -k 01-prerequisites/metallb/
+oc apply -k manifests/01-prerequisites/metallb/
 ----
 
 Wait for the MetalLB CSV to succeed, then create the MetalLB CR and configure an IP pool:
@@ -109,11 +109,11 @@ oc wait csv -n metallb-system -l operators.coreos.com/metallb-operator.metallb-s
   --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s
 
 # Create MetalLB instance
-oc apply -f 01-prerequisites/metallb/metallb.yaml
+oc apply -f manifests/01-prerequisites/metallb/metallb.yaml
 
 # Create IPAddressPool + L2Advertisement (adjust IP range for your network)
 export METALLB_IP_RANGE="192.168.1.240-192.168.1.240"
-envsubst < 04-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
+envsubst < manifests/04-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
 ----
 
 == Verification
@@ -189,7 +189,7 @@ oc get subscriptions.operators.coreos.com -A \
 
 [source]
 ----
-01-prerequisites/
+manifests/01-prerequisites/
   operators/
     kustomization.yaml          # aggregates all operator subdirectories
     cert-manager/

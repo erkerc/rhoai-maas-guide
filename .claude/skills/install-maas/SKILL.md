@@ -31,7 +31,7 @@ Install Models as a Service on an OpenShift cluster with RHOAI using this guide'
 | Phase | What it does | Time |
 |-------|-------------|------|
 | 0 | Preflight  - detect cluster state, decide which phases to run | instant |
-| 1 | Operators  - `oc apply -k 01-prerequisites/operators/`, wait for CSVs | 2-5 min |
+| 1 | Operators  - `oc apply -k manifests/01-prerequisites/operators/`, wait for CSVs | 2-5 min |
 | 2 | Platform  - Kuadrant, UWM, GatewayClass, envsubst Gateway | 2-5 min |
 | 3 | RHOAI  - DSC with modelsAsService: Managed, Dashboard flags | 3-5 min |
 | 4 | MaaS  - PostgreSQL secrets/deployment, Authorino TLS, wait for maas-api | 3-5 min |
@@ -90,7 +90,7 @@ Or use the standalone model script for more control:
 Or directly:
 
 ```bash
-./06-verification/verify.sh
+./manifests/06-verification/verify.sh
 ```
 
 ## Convenience Scripts
@@ -100,7 +100,7 @@ These wrap individual phases for standalone use:
 | Script | What it does |
 |--------|-------------|
 | `scripts/deploy-model.sh` | Phase 5 only  - deploy model with GPU auto-detection |
-| `scripts/verify-maas.sh` | Phase 6 only  - wrapper for `06-verification/verify.sh` |
+| `scripts/verify-maas.sh` | Phase 6 only  - wrapper for `manifests/06-verification/verify.sh` |
 
 ## State Detection
 

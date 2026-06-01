@@ -35,7 +35,7 @@ available IP range, or use envsubst:
 
 ```bash
 export METALLB_IP_RANGE="192.168.1.240-192.168.1.250"
-envsubst < 04-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
+envsubst < manifests/04-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
 ```
 
 ### Step 2: Create the Gateway
@@ -46,13 +46,13 @@ export CERT_NAME=$(oc get ingresscontroller default -n openshift-ingress-operato
   -o jsonpath='{.spec.defaultCertificate.name}' 2>/dev/null)
 export CERT_NAME=${CERT_NAME:-router-certs-default}
 
-envsubst < 04-maas-platform/openshift-gateway-setup/gateway.yaml.tmpl | oc apply -f -
+envsubst < manifests/04-maas-platform/openshift-gateway-setup/gateway.yaml.tmpl | oc apply -f -
 ```
 
 ### Step 3: Create the Route
 
 ```bash
-envsubst < 04-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
+envsubst < manifests/04-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
 ```
 
 ### Verify
@@ -72,5 +72,5 @@ oc get route -n openshift-ingress | grep maas
 ## Cleanup
 
 ```bash
-oc delete -f 04-maas-platform/openshift-gateway-setup/cleanup.yaml
+oc delete -f manifests/04-maas-platform/openshift-gateway-setup/cleanup.yaml
 ```
