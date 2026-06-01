@@ -63,6 +63,16 @@ NOTE: The `setup-maas.sh` script auto-detects non-cloud platforms and installs M
 
 == Installation
 
+=== Step 0: Clone the Repository
+
+[source,bash]
+----
+git clone https://github.com/rh-aiservices-bu/rhoai-maas-guide.git
+cd rhoai-maas-guide
+----
+
+All commands in this guide are run from the repository root.
+
 === Step 1: Install Required Operators
 
 [source,bash]

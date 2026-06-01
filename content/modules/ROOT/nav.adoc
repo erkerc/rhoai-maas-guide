@@ -1,4 +1,5 @@
 * xref:index.adoc[Overview]
+* xref:quick-start.adoc[Quick Start]
 
 .Installation Guide
 * xref:01-prerequisites.adoc[Phase 1: Prerequisites]
@@ -12,3 +13,6 @@
 
 .Observability
 * xref:07-observability.adoc[Phase 7: Observability]
+
+.Tools
+* xref:claude-code.adoc[AI-Assisted Installation]

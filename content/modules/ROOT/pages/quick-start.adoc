@@ -1,0 +1,193 @@
+= Automated Quick Start
+
+`setup-maas.sh` is a single script that handles the entire MaaS lifecycle, from operator installation through model deployment and verification. Each phase is idempotent; re-running skips what's already done.
+
+== Clone and Run
+
+[source,bash]
+----
+git clone https://github.com/rh-aiservices-bu/rhoai-maas-guide.git
+cd rhoai-maas-guide
+./scripts/setup-maas.sh
+----
+
+This runs Phases 0-6 automatically. The script detects what's already installed and skips completed phases.
+
+== Arguments
+
+[cols="2,4,1", options="header"]
+|===
+| Option | Description | Default
+
+| `--model <name>`
+| Model to deploy: `simulator` (CPU), `granite-tiny-gpu` (small GPU), `gpt-oss-20b` (large GPU), `auto` (auto-detect by GPU VRAM)
+| `auto`
+
+| `--from-phase <N>`
+| Start from phase N (0-7), skipping earlier phases
+| `0`
+
+| `--skip-models`
+| Skip Phase 5 (model deployment)
+|
+
+| `--skip-verify`
+| Skip Phase 6 (verification)
+|
+
+| `--with-observability`
+| Also run Phase 7 (COO + Gateway telemetry)
+|
+
+| `--dry-run`
+| Preview what would be applied without making changes
+|
+|===
+
+== Phases
+
+[cols="1,4,1", options="header"]
+|===
+| Phase | What it does | Time
+
+| 0
+| Preflight - detect cluster state, decide which phases to run
+| instant
+
+| 1
+| Operators - `oc apply -k 01-prerequisites/operators/`, wait for CSVs
+| 2-5 min
+
+| 2
+| Platform - Kuadrant, UWM, GatewayClass, envsubst Gateway
+| 2-5 min
+
+| 3
+| RHOAI - DSC with modelsAsService: Managed, Dashboard flags
+| 3-5 min
+
+| 4
+| MaaS - PostgreSQL secrets/deployment, Authorino TLS, wait for maas-api
+| 3-5 min
+
+| 5
+| Model - auto-detect GPU, apply Kustomize, wait for Ready
+| 0.5-15 min
+
+| 6
+| Verify - 6-phase E2E (API, auth, rate limits, cleanup)
+| 3-5 min
+
+| 7
+| Observability - COO subscription + Gateway TelemetryPolicy
+| 2-3 min
+|===
+
+== Common Usage Patterns
+
+=== Full installation (recommended)
+
+For a fresh cluster with no MaaS components:
+
+[source,bash]
+----
+./scripts/setup-maas.sh
+----
+
+=== With observability
+
+[source,bash]
+----
+./scripts/setup-maas.sh --with-observability
+----
+
+=== Resume from a specific phase
+
+If a previous run failed at Phase 4:
+
+[source,bash]
+----
+./scripts/setup-maas.sh --from-phase 4
+----
+
+=== Models only
+
+If the platform is already installed and you just want to deploy a model:
+
+[source,bash]
+----
+./scripts/setup-maas.sh --from-phase 5
+----
+
+Or use the standalone model script for more control:
+
+[source,bash]
+----
+./scripts/deploy-model.sh --model simulator
+----
+
+=== Verify only
+
+[source,bash]
+----
+./scripts/setup-maas.sh --from-phase 6
+----
+
+Or directly:
+
+[source,bash]
+----
+./06-verification/verify.sh
+----
+
+== Convenience Scripts
+
+These wrap individual phases for standalone use:
+
+[cols="2,4", options="header"]
+|===
+| Script | What it does
+
+| `scripts/deploy-model.sh`
+| Phase 5 only - deploy a model with GPU auto-detection
+
+| `scripts/test-inference.sh`
+| Send inference requests to a deployed model endpoint
+
+| `scripts/verify-maas.sh`
+| Phase 6 only - wrapper for `06-verification/verify.sh`
+|===
+
+== State Detection
+
+Phase 0 inspects the cluster and reports what's already installed. The script uses this to skip completed phases:
+
+* Operators installed? Skip Phase 1.
+* Kuadrant + UWM + Gateway ready? Skip Phase 2.
+* DSC with modelsAsService: Managed? Skip Phase 3.
+* PostgreSQL + maas-api running? Skip Phase 4.
+* Models deployed in llm namespace? Skip Phase 5.
+
+Override with `--from-phase N` to force re-running from a specific phase.
+
+== AI-Assisted Installation
+
+If you use an AI coding tool (link:https://claude.ai/code[Claude Code], link:https://opencode.ai[Open Code], link:https://cursor.com[Cursor], link:https://roosoft.com[Roo Code]), the `/install-maas` skill wraps the same script with an interactive, AI-assisted workflow. Clone the repo, open it in your tool, and run:
+
+[source]
+----
+/install-maas
+----
+
+Or with arguments:
+
+[source]
+----
+/install-maas --model simulator --with-observability
+----
+
+See xref:claude-code.adoc[AI-Assisted Installation] for details.
+
+== Final Report
+
+The script ends with a summary: RHOAI version, MaaS API URL, Gateway status, health check, deployed models, and suggested next steps.

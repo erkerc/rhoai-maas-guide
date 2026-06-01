@@ -1,0 +1,67 @@
+= AI-Assisted Installation
+
+This repository includes a skill definition that provides AI-assisted MaaS installation. The `/install-maas` skill wraps the same `setup-maas.sh` script used in the xref:quick-start.adoc[Quick Start], letting your AI coding agent handle cluster detection, error diagnosis, and interactive troubleshooting.
+
+The skill works with any AI coding tool that supports skill definitions:
+
+* link:https://claude.ai/code[Claude Code] / link:https://opencode.ai[Open Code]
+* link:https://cursor.com[Cursor]
+* link:https://roosoft.com[Roo Code]
+* Other AI coding agents with skill support
+
+== Prerequisites
+
+* An AI coding tool installed (see list above)
+* `oc` CLI authenticated as cluster-admin
+* This repository cloned locally
+
+== Usage
+
+Open the repository in your AI coding tool and invoke the skill:
+
+[source]
+----
+/install-maas
+----
+
+=== Arguments
+
+All arguments from `setup-maas.sh` are supported:
+
+[source]
+----
+/install-maas --model simulator
+/install-maas --from-phase 4
+/install-maas --with-observability
+/install-maas --skip-models --skip-verify
+----
+
+[cols="2,4", options="header"]
+|===
+| Option | Description
+
+| `--model <name>`
+| Model to deploy: `simulator` (CPU), `granite-tiny-gpu`, `gpt-oss-20b`, `auto`
+
+| `--from-phase <N>`
+| Start from phase N (0-7)
+
+| `--skip-models`
+| Skip Phase 5 (model deployment)
+
+| `--skip-verify`
+| Skip Phase 6 (verification)
+
+| `--with-observability`
+| Also run Phase 7 (COO + telemetry)
+|===
+
+== What the Skill Does
+
+The skill runs `./scripts/setup-maas.sh` from the repository root with the provided arguments. Your AI coding agent monitors the output, detects failures, and can help diagnose issues interactively.
+
+The skill has access to `oc`, `envsubst`, `curl`, `jq`, and other CLI tools needed for MaaS deployment.
+
+== Skill Definition
+
+The skill is defined in `.claude/skills/install-maas/SKILL.md` within this repository. It is automatically discovered when you open the repo in a compatible AI coding tool.
