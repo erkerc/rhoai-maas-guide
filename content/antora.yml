@@ -1,0 +1,16 @@
+name: modules
+title: RHOAI Models-as-a-Service Guide
+version: main
+nav:
+  - modules/ROOT/nav.adoc
+
+asciidoc:
+  attributes:
+    experimental: true
+    page-pagination: true
+    source-highlighter: highlightjs
+    rhoai: "Red Hat OpenShift AI"
+    rhoai-short: "RHOAI"
+    ocp: "OpenShift Container Platform"
+    ocp-short: "OpenShift"
+    maas: "Models as a Service"

@@ -1,0 +1,69 @@
+= Phase 7: Observability (Optional)
+
+NOTE: User Workload Monitoring (UWM) was already configured in xref:02-platform-config.adoc[Phase 2] as a *required* component. UWM provides the foundational Prometheus scraping infrastructure that all other monitoring features depend on.
+
+This phase adds *optional* observability enhancements on top of UWM:
+
+. *Cluster Observability Operator (COO)* -- required for the Observability Dashboard tab in the {rhoai} UI. COO provides the Perses CRDs (`Perses`, `PersesDatasource`, `PersesDashboard`) that the RHOAI operator uses to deploy the dashboard backend.
+
+. *Gateway Telemetry* -- per-model, per-user, per-subscription usage metrics on the MaaS gateway. Adds fine-grained labels (`model`, `user`, `subscription`, `organization_id`, `cost_center`) to gateway metrics for usage attribution and billing.
+
+== Step 1: Install the Cluster Observability Operator
+
+[source,bash]
+----
+oc apply -k 07-observability/coo/
+----
+
+Wait for the operator CSV to reach `Succeeded`:
+
+[source,bash]
+----
+oc get csv -n openshift-cluster-observability-operator -w
+----
+
+== Step 2: Apply Gateway Telemetry
+
+Once COO is installed and the MaaS gateway is running:
+
+[source,bash]
+----
+oc apply -k 07-observability/telemetry/
+----
+
+== Verification
+
+Check the COO operator is installed:
+
+[source,bash]
+----
+oc get csv -n openshift-cluster-observability-operator | grep cluster-observability-operator
+# Expected: cluster-observability-operator   Succeeded
+----
+
+Check the Perses CRDs are registered:
+
+[source,bash]
+----
+oc get crd perses.perses.dev
+----
+
+Check the TelemetryPolicy exists:
+
+[source,bash]
+----
+oc get telemetrypolicies.extensions.kuadrant.io maas-telemetry -n openshift-ingress
+----
+
+Check the Istio Telemetry exists:
+
+[source,bash]
+----
+oc get telemetry.telemetry.istio.io latency-per-subscription -n openshift-ingress
+----
+
+== References
+
+* link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/monitoring/cluster-observability-operator[Cluster Observability Operator documentation]
+* link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2-latest/html/monitoring_data_science_models/index[RHOAI Observability dashboard]
+* link:https://docs.kuadrant.io/latest/kuadrant-operator/doc/reference/telemetrypolicy/[Kuadrant TelemetryPolicy]

@@ -1,0 +1,22 @@
+---
+site:
+  title: RHOAI Models-as-a-Service Guide
+  url: https://github.com/rh-aiservices-bu/rhoai-maas-guide
+  start_page: modules::index.adoc
+
+content:
+  sources:
+    - url: .
+      start_path: content
+
+ui:
+  bundle:
+    url: https://github.com/rhpds/rhdp_showroom_theme/releases/download/latest/ui-bundle.zip
+    snapshot: true
+
+antora:
+  extensions:
+    - require: '@andrew-jones/antora-tabs-extension'
+
+output:
+  dir: ./www

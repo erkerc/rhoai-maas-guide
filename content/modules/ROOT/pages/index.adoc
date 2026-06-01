@@ -1,0 +1,99 @@
+= RHOAI Models-as-a-Service (MaaS) Guide
+
+Guide to deploy {rhoai} 3.4 {maas} on {ocp-short}.
+
+* Kustomize manifests with status gates between every phase
+* Single automation script for end-to-end deployment
+* CPU-only simulator model for validation without GPUs
+
+Requires OpenShift 4.19+ with cluster-admin access.
+
+IMPORTANT: This guide is not a replacement for the link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html-single/govern_llm_access_with_models-as-a-service/index[official {rhoai} 3.4 {maas} documentation]. It is a companion resource with opinionated Kustomize manifests and automation scripts to accelerate deployment.
+
+== Phases
+
+Each phase has step-by-step instructions, status gates, and troubleshooting.
+
+[cols="1,3,1", options="header"]
+|===
+| Phase | Description | Time
+
+| xref:01-prerequisites.adoc[1. Prerequisites]
+| Operator subscriptions (RHOAI, RHCL, cert-manager, Service Mesh, LWS)
+| 5-10 min
+
+| xref:02-platform-config.adoc[2. Platform Configuration]
+| Kuadrant/Authorino, User Workload Monitoring, GatewayClass, Gateway
+| 5-10 min
+
+| xref:03-rhoai-config.adoc[3. RHOAI Configuration]
+| DataScienceCluster, DSCInitialization, Dashboard settings
+| 5-10 min
+
+| xref:04-maas-platform.adoc[4. MaaS Platform]
+| PostgreSQL database, Authorino TLS configuration
+| 5 min
+
+| xref:05-maas-models.adoc[5. Model Deployment]
+| Deploy and register LLM models with MaaS
+| 1-15 min
+
+| xref:06-verification.adoc[6. Verification]
+| End-to-end checks (API keys, inference, rate limiting)
+| 5 min
+
+| xref:07-observability.adoc[7. Observability] _(optional)_
+| COO subscription + Gateway telemetry dashboards
+| 5 min
+|===
+
+== Quick Start
+
+A single script runs all phases end-to-end. Each phase is idempotent -- re-running skips what is already done.
+
+[source,bash]
+----
+./scripts/setup-maas.sh
+----
+
+Resume from a specific phase after a failure:
+
+[source,bash]
+----
+./scripts/setup-maas.sh --from-phase 4
+----
+
+With observability (Cluster Observability Operator + Gateway telemetry):
+
+[source,bash]
+----
+./scripts/setup-maas.sh --with-observability
+----
+
+== Available Models
+
+[cols="1,1,1,2", options="header"]
+|===
+| Model | GPU Required | VRAM | Use Case
+
+| `simulator`
+| No
+| None
+| Testing/demo (CPU-only)
+
+| `granite-tiny-gpu`
+| Yes
+| < 40 GiB
+| Small GPU (T4, L4, A10)
+
+| `gpt-oss-20b`
+| Yes
+| >= 40 GiB
+| Large GPU (L40S, A100, H100)
+|===
+
+== Documentation
+
+* link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas[RHOAI 3.4 MaaS Official Docs]
+* link:https://opendatahub-io.github.io/models-as-a-service/latest/[Upstream MaaS Documentation]
+* link:https://opendatahub-io.github.io/models-as-a-service/latest/concepts/architecture/[Upstream MaaS Architecture]

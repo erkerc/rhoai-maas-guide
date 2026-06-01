@@ -1,0 +1,241 @@
+= Phase 2: Platform Configuration
+
+This phase configures the platform prerequisites for MaaS: Kuadrant/Authorino (auth and rate limiting), User Workload Monitoring, the GatewayClass, and the MaaS Gateway.
+
+Apply each step in order and wait for the status gates before proceeding to the next step. The ordering matters because later resources depend on earlier ones (e.g. the Authorino CR references the TLS cert created by the Service annotation, and the Gateway requires the GatewayClass to exist).
+
+== Prerequisites
+
+* OpenShift 4.17+ cluster with `oc` CLI authenticated as cluster-admin
+* Red Hat Connectivity Link (RHCL) operator already installed (see link:https://docs.redhat.com/en/documentation/red_hat_connectivity_link[RHCL docs])
+* xref:01-prerequisites.adoc[Phase 1] (operators) completed
+
+== Step 1: Kuadrant and Authorino
+
+Apply the namespace, service annotation, and Kuadrant CR. Do *not* apply the full kustomization in one shot -- the Kuadrant operator auto-creates an Authorino CR when it reconciles the Kuadrant resource, so the Authorino CR must be configured separately via `oc patch` after Kuadrant is ready.
+
+[source,bash]
+----
+oc apply -f 02-platform-config/kuadrant/namespace.yaml
+oc apply -f 02-platform-config/kuadrant/service-annotation.yaml
+oc apply -f 02-platform-config/kuadrant/kuadrant.yaml
+----
+
+Wait for Kuadrant to become ready:
+
+[source,bash]
+----
+oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=120s
+----
+
+[NOTE]
+====
+*Troubleshooting:* If Kuadrant reports `MissingDependency` (Istio race condition), restart the Kuadrant operator pod and wait again:
+
+[source,bash]
+----
+oc delete pod -n openshift-operators \
+  $(oc get pods -n openshift-operators --no-headers | grep kuadrant-operator | awk '{print $1}')
+oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=180s
+----
+====
+
+== Step 2: Configure TLS for Models-as-a-Service
+
+Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas#configure-tls-for-maas_maas-deploy[RHOAI 3.4 docs section 1.4], four steps to enable TLS between the Gateway and Authorino.
+
+*Step 2a:* The service annotation (already applied above) triggers the service-ca operator to generate the `authorino-server-cert` TLS Secret:
+
+[source,bash]
+----
+oc get secret authorino-server-cert -n kuadrant-system
+----
+
+*Step 2b:* Patch the Authorino CR to enable the TLS listener:
+
+[source,bash]
+----
+oc patch authorino authorino -n kuadrant-system --type=merge --patch '{
+  "spec": {
+    "listener": {
+      "tls": {
+        "enabled": true,
+        "certSecretRef": {
+          "name": "authorino-server-cert"
+        }
+      }
+    }
+  }
+}'
+----
+
+*Step 2c:* Configure Authorino deployment with TLS certificate env vars:
+
+[source,bash]
+----
+oc -n kuadrant-system set env deployment/authorino \
+  SSL_CERT_FILE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt \
+  REQUESTS_CA_BUNDLE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt
+----
+
+Wait for the Authorino deployment to become available:
+
+[source,bash]
+----
+oc wait --for=condition=Available deployment/authorino -n kuadrant-system --timeout=300s
+----
+
+== Step 3: User Workload Monitoring (UWM)
+
+Enable User Workload Monitoring so that Prometheus scrapes MaaS and Kuadrant metrics from user namespaces.
+
+[source,bash]
+----
+oc apply -k 02-platform-config/uwm/
+----
+
+Wait for the user-workload monitoring stack to start:
+
+[source,bash]
+----
+oc wait --for=condition=Available deployment/prometheus-operator \
+  -n openshift-user-workload-monitoring --timeout=300s
+----
+
+Verify the Prometheus pods are running:
+
+[source,bash]
+----
+oc get pods -n openshift-user-workload-monitoring
+----
+
+You should see `prometheus-user-workload-0` and `thanos-ruler-user-workload-0` pods in Running state.
+
+== Step 4: GatewayClass
+
+Apply the GatewayClass that initializes OpenShift's built-in Gateway API controller:
+
+[source,bash]
+----
+oc apply -f 02-platform-config/gatewayclass.yaml
+----
+
+Wait for the GatewayClass to be accepted:
+
+[source,bash]
+----
+oc wait --for=condition=Accepted gatewayclass/openshift-default --timeout=120s
+----
+
+Verify:
+
+[source,bash]
+----
+oc get gatewayclass openshift-default
+----
+
+Expected output:
+
+[source]
+----
+NAME                CONTROLLER                           ACCEPTED   AGE
+openshift-default   openshift.io/gateway-controller/v1   True       ...
+----
+
+== Step 5: MaaS Gateway
+
+The Gateway uses cluster-specific values (domain and TLS cert name), so it is provided as an envsubst template. Detect the values, render the template, and apply.
+
+Detect the cluster domain and TLS certificate name:
+
+[source,bash]
+----
+export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster \
+  -o jsonpath='{.spec.domain}')
+
+export CERT_NAME=$(oc get ingresscontroller default \
+  -n openshift-ingress-operator \
+  -o jsonpath='{.spec.defaultCertificate.name}' 2>/dev/null)
+[ -z "$CERT_NAME" ] && export CERT_NAME="router-certs-default"
+----
+
+Render and apply:
+
+[source,bash]
+----
+envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < 02-platform-config/gateway.yaml.tmpl | oc apply -f -
+----
+
+*Step 2d:* Annotate the Gateway for Authorino TLS bootstrap (docs section 1.4, step 4):
+
+[source,bash]
+----
+oc annotate gateway maas-default-gateway -n openshift-ingress \
+  security.opendatahub.io/authorino-tls-bootstrap="true" --overwrite
+----
+
+Wait for the Gateway to be programmed:
+
+[source,bash]
+----
+oc wait --for=condition=Programmed gateway/maas-default-gateway \
+  -n openshift-ingress --timeout=120s
+----
+
+[NOTE]
+====
+*Non-cloud clusters (baremetal/OpenStack/RHPDS/SNO):* If the Gateway stays in `AddressNotAssigned` because no cloud load-balancer provisions an external IP, you need *MetalLB* to assign a LoadBalancer IP. See xref:01-prerequisites.adoc[Phase 1: MetalLB for Non-Cloud Clusters].
+
+After MetalLB is installed with an IPAddressPool, the Gateway service will receive an external IP and reach `Programmed=True`.
+
+Additionally, create a passthrough Route to make the Gateway reachable via the cluster's DNS:
+
+[source,bash]
+----
+envsubst '${CLUSTER_DOMAIN}' < 04-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
+----
+
+This routes traffic through the existing OpenShift ingress controller.
+====
+
+Verify:
+
+[source,bash]
+----
+oc get gateway maas-default-gateway -n openshift-ingress
+----
+
+== Verification
+
+After completing all steps, confirm the full platform state:
+
+[source,bash]
+----
+# Kuadrant ready
+oc get kuadrant -n kuadrant-system
+
+# Authorino running with TLS
+oc get deployment authorino -n kuadrant-system
+oc get secret authorino-server-cert -n kuadrant-system
+
+# UWM running
+oc get pods -n openshift-user-workload-monitoring
+
+# GatewayClass accepted
+oc get gatewayclass openshift-default
+
+# Gateway programmed
+oc get gateway maas-default-gateway -n openshift-ingress
+----
+
+== References
+
+* link:https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/install/platform-setup.md[MaaS Platform Setup (upstream)]
+* link:https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/install/maas-setup.md[MaaS Gateway Setup (upstream)]
+* link:https://docs.redhat.com/en/documentation/red_hat_connectivity_link[Red Hat Connectivity Link documentation]
+* link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/monitoring/enabling-monitoring-for-user-defined-projects[OpenShift User Workload Monitoring]
+* link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/networking/gateway-api[Gateway API on OpenShift]
+
+== Next Steps
+
+Proceed to xref:03-rhoai-config.adoc[Phase 3: RHOAI Configuration].
