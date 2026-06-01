@@ -16,14 +16,26 @@ Requires OpenShift 4.19+ with cluster-admin access.
 
 Each phase has step-by-step instructions, status gates, and troubleshooting.
 
+### Installation Guide
+
 | Phase | Description | Time |
 |-------|-------------|------|
 | [1. Prerequisites](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/01-prerequisites.html) | Operator subscriptions (RHOAI, RHCL, cert-manager, Service Mesh, LWS) | 5-10 min |
 | [2. Platform Configuration](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/02-platform-config.html) | Kuadrant/Authorino, User Workload Monitoring, GatewayClass, Gateway | 5-10 min |
 | [3. RHOAI Configuration](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/03-rhoai-config.html) | DataScienceCluster, DSCInitialization, Dashboard settings | 5-10 min |
 | [4. MaaS Platform](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/04-maas-platform.html) | PostgreSQL database, Authorino TLS configuration | 5 min |
+
+### Model Deployment & Verification
+
+| Phase | Description | Time |
+|-------|-------------|------|
 | [5. Model Deployment](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/05-maas-models.html) | Deploy and register LLM models with MaaS | 1-15 min |
 | [6. Verification](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/06-verification.html) | End-to-end checks (API keys, inference, rate limiting) | 5 min |
+
+### Observability
+
+| Phase | Description | Time |
+|-------|-------------|------|
 | [7. Observability](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/07-observability.html) *(optional)* | COO subscription + Gateway telemetry dashboards | 5 min |
 
 ## Quick Start

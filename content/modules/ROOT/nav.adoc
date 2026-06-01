@@ -5,6 +5,10 @@
 * xref:02-platform-config.adoc[Phase 2: Platform Configuration]
 * xref:03-rhoai-config.adoc[Phase 3: RHOAI Configuration]
 * xref:04-maas-platform.adoc[Phase 4: MaaS Platform]
+
+.Model Deployment & Verification
 * xref:05-maas-models.adoc[Phase 5: Model Deployment]
 * xref:06-verification.adoc[Phase 6: Verification]
+
+.Observability
 * xref:07-observability.adoc[Phase 7: Observability]
