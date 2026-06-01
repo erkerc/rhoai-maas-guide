@@ -38,7 +38,7 @@ Each phase has step-by-step instructions, status gates, and troubleshooting.
 |-------|-------------|------|
 | [7. Observability](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/07-observability.html) *(optional)* | COO subscription + Gateway telemetry dashboards | 5 min |
 
-## Quick Start
+## Automated Setup
 
 A single script runs all phases end-to-end. Each phase is idempotent - re-running skips what is already done.
 

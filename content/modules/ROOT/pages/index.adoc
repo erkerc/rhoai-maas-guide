@@ -78,9 +78,9 @@ Each phase has step-by-step instructions, status gates, and troubleshooting.
 | 5 min
 |===
 
-== Quick Start
+== Automated Setup
 
-For automated end-to-end deployment using a single script, see the xref:quick-start.adoc[Quick Start] page.
+For end-to-end deployment using a single script, see the xref:quick-start.adoc[Automated Setup] page.
 
 == Available Models
 

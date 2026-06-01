@@ -1,6 +1,6 @@
 = AI-Assisted Installation
 
-This repository includes a skill definition that provides AI-assisted MaaS installation. The `/install-maas` skill wraps the same `setup-maas.sh` script used in the xref:quick-start.adoc[Quick Start], letting your AI coding agent handle cluster detection, error diagnosis, and interactive troubleshooting.
+This repository includes a skill definition that provides AI-assisted MaaS installation. The `/install-maas` skill wraps the same `setup-maas.sh` script used in the xref:quick-start.adoc[Automated Setup], letting your AI coding agent handle cluster detection, error diagnosis, and interactive troubleshooting.
 
 The skill works with any AI coding tool that supports skill definitions:
 

@@ -1,4 +1,4 @@
-= Automated Quick Start
+= Automated Setup
 
 `setup-maas.sh` is a single script that handles the entire MaaS lifecycle, from operator installation through model deployment and verification. Each phase is idempotent; re-running skips what's already done.
 
