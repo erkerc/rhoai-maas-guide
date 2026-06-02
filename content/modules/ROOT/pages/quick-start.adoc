@@ -63,11 +63,11 @@ This runs Phases 0-6 automatically. The script detects what's already installed 
 | 2-5 min
 
 | 3
-| RHOAI - DSC with modelsAsService: Managed, Dashboard flags
-| 3-5 min
+| MaaS Platform - PostgreSQL secrets/deployment
+| 2-3 min
 
 | 4
-| MaaS - PostgreSQL secrets/deployment, Authorino TLS, wait for maas-api
+| RHOAI - DSC with modelsAsService: Managed, Dashboard flags, wait for maas-api
 | 3-5 min
 
 | 5
@@ -164,8 +164,8 @@ Phase 0 inspects the cluster and reports what's already installed. The script us
 
 * Operators installed? Skip Phase 1.
 * Kuadrant + UWM + Gateway ready? Skip Phase 2.
-* DSC with modelsAsService: Managed? Skip Phase 3.
-* PostgreSQL + maas-api running? Skip Phase 4.
+* PostgreSQL running? Skip Phase 3.
+* DSC with modelsAsService: Managed + maas-api running? Skip Phase 4.
 * Models deployed in llm namespace? Skip Phase 5.
 
 Override with `--from-phase N` to force re-running from a specific phase.

@@ -23,8 +23,8 @@ Each phase has step-by-step instructions, status gates, and troubleshooting.
 |-------|-------------|------|
 | [1. Prerequisites](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/01-prerequisites.html) | Operator subscriptions (RHOAI, RHCL, cert-manager, Service Mesh, LWS) | 5-10 min |
 | [2. Platform Configuration](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/02-platform-config.html) | Kuadrant/Authorino, User Workload Monitoring, GatewayClass, Gateway | 5-10 min |
-| [3. RHOAI Configuration](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/03-rhoai-config.html) | DataScienceCluster, DSCInitialization, Dashboard settings | 5-10 min |
-| [4. MaaS Platform](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/04-maas-platform.html) | PostgreSQL database, Authorino TLS configuration | 5 min |
+| [3. MaaS Platform](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/03-maas-platform.html) | PostgreSQL database and secrets | 5 min |
+| [4. RHOAI Configuration](https://rh-aiservices-bu.github.io/rhoai-maas-guide/modules/main/04-rhoai-config.html) | DataScienceCluster, DSCInitialization, Dashboard settings | 5-10 min |
 
 ### Model Deployment & Verification
 

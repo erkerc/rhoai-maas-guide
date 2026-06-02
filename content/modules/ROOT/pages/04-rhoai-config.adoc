@@ -1,11 +1,11 @@
-= Phase 3: RHOAI Configuration
+= Phase 4: RHOAI Configuration
 
-Configure the RHOAI operator instances after the operator is installed and ready (xref:02-platform-config.adoc[Phase 2]).
+Configure the RHOAI operator instances to enable Models-as-a-Service. Because the PostgreSQL database and `maas-db-config` secret already exist (xref:03-maas-platform.adoc[Phase 3]), the `maas-api` deployment will start healthy immediately.
 
 == Prerequisites
 
 * RHOAI operator is installed and CSV is in `Succeeded` state
-* xref:02-platform-config.adoc[Phase 2] (platform configuration) is fully applied
+* xref:03-maas-platform.adoc[Phase 3] (MaaS platform) is completed — PostgreSQL is running and `maas-db-config` secret exists
 
 Verify the operator is ready before proceeding:
 
@@ -22,8 +22,8 @@ On a fresh install, apply in two stages. The `OdhDashboardConfig` CRD does not e
 [source,bash]
 ----
 # Stage 1: DSC and DSCI (triggers operator reconciliation)
-oc apply -f manifests/03-rhoai-config/dscinitialization.yaml
-oc apply -f manifests/03-rhoai-config/datasciencecluster.yaml
+oc apply -f manifests/04-rhoai-config/dscinitialization.yaml
+oc apply -f manifests/04-rhoai-config/datasciencecluster.yaml
 ----
 
 Wait for the operator to reconcile and register all CRDs (see Verify section below), then apply the dashboard config:
@@ -31,10 +31,10 @@ Wait for the operator to reconcile and register all CRDs (see Verify section bel
 [source,bash]
 ----
 # Stage 2: Dashboard config (requires OdhDashboardConfig CRD to exist)
-oc apply -f manifests/03-rhoai-config/odh-dashboard-config.yaml
+oc apply -f manifests/04-rhoai-config/odh-dashboard-config.yaml
 ----
 
-On subsequent runs (CRDs already exist), `oc apply -k manifests/03-rhoai-config/` works in one shot.
+On subsequent runs (CRDs already exist), `oc apply -k manifests/04-rhoai-config/` works in one shot.
 
 == Verify
 
@@ -69,7 +69,34 @@ oc get crd | grep maas.opendatahub.io
 
 === Check maas-api deployment
 
-NOTE: The `maas-api` deployment does not exist yet at this stage. It will be created automatically once the PostgreSQL database and `maas-db-config` secret are configured in xref:04-maas-platform.adoc[Phase 4]. You can verify it after completing Phase 4.
+Since PostgreSQL and the `maas-db-config` secret were created in Phase 3, the `maas-api` deployment should start healthy:
+
+[source,bash]
+----
+oc rollout status deployment/maas-api -n redhat-ods-applications --timeout=120s
+----
+
+TIP: The `maas-api` deployment may take 30-60 seconds to appear after the DSC is applied. If it is not found, wait and retry.
+
+=== Check Tenant CR
+
+The maas-controller auto-creates a `default-tenant` CR in the `models-as-a-service` namespace:
+
+[source,bash]
+----
+oc get tenant default-tenant -n models-as-a-service
+----
+
+NOTE: The `default-tenant` CR may show `Ready=False` with reason `DeploymentsNotReady` at this stage. This is expected — it will become `Ready=True` after a model is deployed in xref:05-maas-models.adoc[Phase 5].
+
+=== MaaS health endpoint
+
+[source,bash]
+----
+CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
+curl -sk "https://maas.${CLUSTER_DOMAIN}/maas-api/health"
+# Expected: {"status":"healthy"}
+----
 
 === Check DSCInitialization
 
@@ -127,4 +154,4 @@ oc get pods -n redhat-ods-applications
 
 == Next step
 
-Proceed to xref:04-maas-platform.adoc[Phase 4: MaaS Platform Infrastructure].
+Proceed to xref:05-maas-models.adoc[Phase 5: Model Deployment].

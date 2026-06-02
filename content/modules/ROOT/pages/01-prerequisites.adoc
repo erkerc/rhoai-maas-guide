@@ -115,7 +115,7 @@ oc apply -f manifests/01-prerequisites/metallb/metallb.yaml
 # For SNO clusters, use the node's internal IP:
 export METALLB_IP_RANGE="$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')-$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
 # For multi-node clusters, adjust the range to an unused IP range on your network
-envsubst < manifests/04-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
+envsubst < manifests/03-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
 ----
 
 == Verification

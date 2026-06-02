@@ -158,7 +158,7 @@ export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster \
 export CERT_NAME=$(oc get ingresscontroller default \
   -n openshift-ingress-operator \
   -o jsonpath='{.spec.defaultCertificate.name}' 2>/dev/null)
-[ -z "$CERT_NAME" ] && export CERT_NAME="router-certs-default"
+export CERT_NAME="${CERT_NAME:-router-certs-default}"
 ----
 
 Render and apply:
@@ -201,7 +201,7 @@ Additionally, create a passthrough Route to make the Gateway reachable via the c
 
 [source,bash]
 ----
-envsubst '${CLUSTER_DOMAIN}' < manifests/04-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
+envsubst '${CLUSTER_DOMAIN}' < manifests/03-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
 ----
 
 This routes traffic through the existing OpenShift ingress controller.
@@ -247,4 +247,4 @@ oc get gateway maas-default-gateway -n openshift-ingress
 
 == Next Steps
 
-Proceed to xref:03-rhoai-config.adoc[Phase 3: RHOAI Configuration].
+Proceed to xref:03-maas-platform.adoc[Phase 3: MaaS Platform].

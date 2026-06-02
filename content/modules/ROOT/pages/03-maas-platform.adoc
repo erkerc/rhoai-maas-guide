@@ -1,0 +1,151 @@
+= Phase 3: MaaS Platform Infrastructure
+
+Deploy the PostgreSQL database required by the MaaS API for key lifecycle management.
+
+== Prerequisites
+
+* xref:02-platform-config.adoc[Phase 2] (platform configuration) is completed
+* Kuadrant, User Workload Monitoring, GatewayClass, and Gateway are configured
+* `redhat-ods-applications` namespace exists (created by the RHOAI operator in Phase 1)
+
+== Overview
+
+The MaaS platform requires a PostgreSQL database before the RHOAI operator can fully enable Models-as-a-Service. Deploying PostgreSQL and creating the `maas-db-config` secret *before* enabling `modelsAsService` in the DataScienceCluster (Phase 4) ensures the `maas-api` deployment starts without crash-looping.
+
+. *PostgreSQL database* - stores API key metadata (hashed tokens, subscription bindings, expiration, revocation state).
+. *PostgreSQL secrets* - `postgres-creds` (DB credentials) and `maas-db-config` (connection URL consumed by maas-api).
+
+== Quick start (automated)
+
+The `scripts/setup-maas.sh` script handles all of the above in a single command:
+
+[source,bash]
+----
+./scripts/setup-maas.sh
+----
+
+== Manual setup
+
+=== Step 1: Create PostgreSQL secrets
+
+These secrets cannot be stored in git. Create them imperatively:
+
+[source,bash]
+----
+# Generate a random password
+POSTGRES_PASSWORD=$(openssl rand -base64 16 | tr -d '=+/')
+
+# Create postgres-creds (consumed by the PostgreSQL deployment)
+oc create secret generic postgres-creds \
+  -n redhat-ods-applications \
+  --from-literal=POSTGRES_USER=maas \
+  --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+  --from-literal=POSTGRES_DB=maas
+
+# Create maas-db-config (consumed by maas-api)
+oc create secret generic maas-db-config \
+  -n redhat-ods-applications \
+  --from-literal=DB_CONNECTION_URL="postgresql://maas:${POSTGRES_PASSWORD}@postgres:5432/maas?sslmode=disable"
+----
+
+=== Step 2: Deploy PostgreSQL
+
+Apply the PostgreSQL manifests using Kustomize:
+
+[source,bash]
+----
+oc apply -k manifests/03-maas-platform/
+----
+
+Or apply individually:
+
+[source,bash]
+----
+oc apply -f manifests/03-maas-platform/postgres-pvc.yaml
+oc apply -f manifests/03-maas-platform/postgres-service.yaml
+oc apply -f manifests/03-maas-platform/postgres-deployment.yaml
+----
+
+== Verify
+
+=== PostgreSQL
+
+[source,bash]
+----
+# Wait for PostgreSQL pod to be ready
+oc wait --for=condition=Available deployment/postgres \
+  -n redhat-ods-applications --timeout=120s
+
+# Confirm the pod is running
+oc get pods -n redhat-ods-applications -l app=postgres
+----
+
+=== PostgreSQL secrets
+
+[source,bash]
+----
+# Verify both secrets exist
+oc get secret postgres-creds -n redhat-ods-applications
+oc get secret maas-db-config -n redhat-ods-applications
+----
+
+=== Gateway
+
+[source,bash]
+----
+oc wait --for=condition=Programmed gateway/maas-default-gateway \
+  -n openshift-ingress --timeout=60s
+----
+
+== What this creates
+
+[cols="1,1,3", options="header"]
+|===
+| Resource | Namespace | Purpose
+
+| `PVC/postgres-data`
+| redhat-ods-applications
+| 20Gi storage for PostgreSQL data
+
+| `Service/postgres`
+| redhat-ods-applications
+| ClusterIP service for PostgreSQL
+
+| `Deployment/postgres`
+| redhat-ods-applications
+| PostgreSQL 16 instance (RHEL 9 based)
+
+| `Secret/postgres-creds`
+| redhat-ods-applications
+| DB user, password, database name (imperative)
+
+| `Secret/maas-db-config`
+| redhat-ods-applications
+| Connection URL for maas-api (imperative)
+|===
+
+== Troubleshooting
+
+=== PostgreSQL pod not starting
+
+[source,bash]
+----
+oc describe pod -n redhat-ods-applications -l app=postgres
+oc logs -n redhat-ods-applications -l app=postgres
+----
+
+Common causes:
+
+* `postgres-creds` secret does not exist (create it per Step 1)
+* PVC cannot be bound (check StorageClass availability)
+
+=== Gateway stuck in Pending
+
+On baremetal/OpenStack clusters without a cloud LB controller:
+
+* See `openshift-gateway-setup/` for MetalLB configuration
+* On cloud clusters, the LB provisions automatically
+
+== Next step
+
+Proceed to xref:04-rhoai-config.adoc[Phase 4: RHOAI Configuration].

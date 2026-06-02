@@ -4,7 +4,7 @@ This phase deploys LLM models and registers them with the MaaS platform. Each mo
 
 == Prerequisites
 
-* xref:01-prerequisites.adoc[Phases 1]-xref:04-maas-platform.adoc[4] completed (RHOAI installed, MaaS platform running)
+* xref:01-prerequisites.adoc[Phases 1]-xref:04-rhoai-config.adoc[4] completed (RHOAI installed, MaaS platform running)
 * MaaS Gateway available in `openshift-ingress` namespace
 * `maas-api` and `maas-controller` pods running in `redhat-ods-applications`
 

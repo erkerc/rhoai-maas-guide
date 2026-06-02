@@ -6,8 +6,8 @@
 #   Phase 0: Preflight  - detect cluster state, decide which phases to run
 #   Phase 1: Operators  - install required operator subscriptions
 #   Phase 2: Platform config  - Kuadrant, UWM, GatewayClass, Gateway
-#   Phase 3: RHOAI config  - DataScienceCluster, DSCInitialization, Dashboard
-#   Phase 4: MaaS platform  - PostgreSQL secrets/deployment, Authorino TLS
+#   Phase 3: MaaS platform  - PostgreSQL secrets/deployment, Authorino TLS
+#   Phase 4: RHOAI config   - DataScienceCluster, DSCInitialization, Dashboard
 #   Phase 5: Deploy model  - auto-detect GPU, apply model Kustomize
 #   Phase 6: Verify  - run 6-phase E2E verification
 #   Phase 7: Observability (optional)  - COO + Gateway telemetry
@@ -413,7 +413,7 @@ if should_run 2; then
                                 METALLB_IP_RANGE="192.168.1.240-192.168.1.240"
                                 log_info "Creating MetalLB IPAddressPool: ${METALLB_IP_RANGE}"
                                 export METALLB_IP_RANGE
-                                envsubst '${METALLB_IP_RANGE}' < "$MANIFESTS_DIR/04-maas-platform/openshift-gateway-setup/metallb-config.yaml" | oc apply -f -
+                                envsubst '${METALLB_IP_RANGE}' < "$MANIFESTS_DIR/03-maas-platform/openshift-gateway-setup/metallb-config.yaml" | oc apply -f -
                             else
                                 log_warn "Cannot detect node IP for MetalLB pool"
                             fi
@@ -430,7 +430,7 @@ if should_run 2; then
 
                     # Create passthrough Route as fallback (works for both MetalLB and non-MetalLB)
                     log_info "Creating passthrough Route as fallback..."
-                    ROUTE_TMPL="$MANIFESTS_DIR/04-maas-platform/openshift-gateway-setup/route.yaml.tmpl"
+                    ROUTE_TMPL="$MANIFESTS_DIR/03-maas-platform/openshift-gateway-setup/route.yaml.tmpl"
                     if [ -f "$ROUTE_TMPL" ]; then
                         export CLUSTER_DOMAIN
                         envsubst '${CLUSTER_DOMAIN}' < "$ROUTE_TMPL" | oc apply -f -
@@ -461,48 +461,10 @@ if should_run 2; then
 fi
 
 # =============================================================================
-# Phase 3: RHOAI Configuration
+# Phase 3: MaaS Platform (PostgreSQL + secrets before DSC enables modelsAsService)
 # =============================================================================
 if should_run 3; then
-    log_phase 3 "RHOAI Configuration"
-
-    if [ "$HAS_MAAS_MANAGED" = true ]; then
-        log_info "DSC already has modelsAsService: Managed, skipping"
-    else
-        log_step "Applying DSC and DSCI..."
-        run_cmd oc apply -f "$MANIFESTS_DIR/03-rhoai-config/dscinitialization.yaml"
-        run_cmd oc apply -f "$MANIFESTS_DIR/03-rhoai-config/datasciencecluster.yaml"
-        log_info "DSC/DSCI applied"
-
-        if [ "$DRY_RUN" = false ]; then
-            log_info "Waiting for KserveReady condition (up to 5 minutes)..."
-            oc wait --for=jsonpath='{.status.conditions[?(@.type=="KserveReady")].status}'=True \
-                datasciencecluster/default-dsc --timeout=300s 2>/dev/null || \
-                log_warn "KserveReady did not become True within 300s"
-
-            log_info "Waiting for ModelControllerReady condition..."
-            oc wait --for=jsonpath='{.status.conditions[?(@.type=="ModelControllerReady")].status}'=True \
-                datasciencecluster/default-dsc --timeout=300s 2>/dev/null || \
-                log_warn "ModelControllerReady did not become True within 300s"
-
-            if oc get crd maasmodelrefs.maas.opendatahub.io &>/dev/null; then
-                log_info "MaaS CRDs registered"
-            else
-                log_warn "MaaS CRDs not yet registered  - operator may still be reconciling"
-            fi
-        fi
-
-        log_step "Applying OdhDashboardConfig..."
-        run_cmd oc apply -f "$MANIFESTS_DIR/03-rhoai-config/odh-dashboard-config.yaml"
-        log_info "Dashboard config applied"
-    fi
-fi
-
-# =============================================================================
-# Phase 4: MaaS Platform
-# =============================================================================
-if should_run 4; then
-    log_phase 4 "MaaS Platform"
+    log_phase 3 "MaaS Platform"
 
     # Step 1: PostgreSQL secrets
     log_step "PostgreSQL secrets"
@@ -526,7 +488,7 @@ if should_run 4; then
     if [ "$HAS_POSTGRES" = true ]; then
         log_info "PostgreSQL already deployed, skipping"
     else
-        run_cmd oc apply -k "$MANIFESTS_DIR/04-maas-platform/"
+        run_cmd oc apply -k "$MANIFESTS_DIR/03-maas-platform/"
         wait_for "PostgreSQL available" 120 \
             oc wait --for=condition=Available deployment/postgres -n "$NAMESPACE"
     fi
@@ -565,8 +527,46 @@ if should_run 4; then
         run_cmd oc annotate gateway maas-default-gateway -n openshift-ingress \
             security.opendatahub.io/authorino-tls-bootstrap="true" --overwrite
     fi
+fi
 
-    # Step 4: Wait for maas-api
+# =============================================================================
+# Phase 4: RHOAI Configuration (DSC enables modelsAsService after DB exists)
+# =============================================================================
+if should_run 4; then
+    log_phase 4 "RHOAI Configuration"
+
+    if [ "$HAS_MAAS_MANAGED" = true ]; then
+        log_info "DSC already has modelsAsService: Managed, skipping"
+    else
+        log_step "Applying DSC and DSCI..."
+        run_cmd oc apply -f "$MANIFESTS_DIR/04-rhoai-config/dscinitialization.yaml"
+        run_cmd oc apply -f "$MANIFESTS_DIR/04-rhoai-config/datasciencecluster.yaml"
+        log_info "DSC/DSCI applied"
+
+        if [ "$DRY_RUN" = false ]; then
+            log_info "Waiting for KserveReady condition (up to 5 minutes)..."
+            oc wait --for=jsonpath='{.status.conditions[?(@.type=="KserveReady")].status}'=True \
+                datasciencecluster/default-dsc --timeout=300s 2>/dev/null || \
+                log_warn "KserveReady did not become True within 300s"
+
+            log_info "Waiting for ModelControllerReady condition..."
+            oc wait --for=jsonpath='{.status.conditions[?(@.type=="ModelControllerReady")].status}'=True \
+                datasciencecluster/default-dsc --timeout=300s 2>/dev/null || \
+                log_warn "ModelControllerReady did not become True within 300s"
+
+            if oc get crd maasmodelrefs.maas.opendatahub.io &>/dev/null; then
+                log_info "MaaS CRDs registered"
+            else
+                log_warn "MaaS CRDs not yet registered  - operator may still be reconciling"
+            fi
+        fi
+
+        log_step "Applying OdhDashboardConfig..."
+        run_cmd oc apply -f "$MANIFESTS_DIR/04-rhoai-config/odh-dashboard-config.yaml"
+        log_info "Dashboard config applied"
+    fi
+
+    # Wait for maas-api (should start healthy since PostgreSQL was deployed in Phase 3)
     log_step "Waiting for maas-api deployment"
     if [ "$HAS_MAAS_API" = true ]; then
         log_info "maas-api already running"
@@ -589,7 +589,7 @@ if should_run 4; then
         [ $ELAPSED -ge $TIMEOUT ] && log_warn "maas-api not found after ${TIMEOUT}s  - operator may still be reconciling"
     fi
 
-    # Step 5: Verify Tenant CR
+    # Verify Tenant CR
     if [ "$DRY_RUN" = false ]; then
         TENANT_READY=$(oc get tenant default-tenant -n models-as-a-service \
             -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")

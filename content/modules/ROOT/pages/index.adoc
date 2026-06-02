@@ -43,13 +43,13 @@ Each phase has step-by-step instructions, status gates, and troubleshooting.
 | Kuadrant/Authorino, User Workload Monitoring, GatewayClass, Gateway
 | 5-10 min
 
-| xref:03-rhoai-config.adoc[3. RHOAI Configuration]
+| xref:03-maas-platform.adoc[3. MaaS Platform]
+| PostgreSQL database and secrets
+| 5 min
+
+| xref:04-rhoai-config.adoc[4. RHOAI Configuration]
 | DataScienceCluster, DSCInitialization, Dashboard settings
 | 5-10 min
-
-| xref:04-maas-platform.adoc[4. MaaS Platform]
-| PostgreSQL database, Authorino TLS configuration
-| 5 min
 |===
 
 === Model Deployment & Verification
