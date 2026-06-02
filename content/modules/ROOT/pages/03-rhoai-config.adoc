@@ -69,13 +69,7 @@ oc get crd | grep maas.opendatahub.io
 
 === Check maas-api deployment
 
-[source,bash]
-----
-oc get deployment maas-api -n redhat-ods-applications
-oc rollout status deployment/maas-api -n redhat-ods-applications --timeout=120s
-----
-
-NOTE: maas-api will crash-loop until the PostgreSQL database and `maas-db-config` secret are created in xref:04-maas-platform.adoc[Phase 4]. This is expected behavior.
+NOTE: The `maas-api` deployment does not exist yet at this stage. It will be created automatically once the PostgreSQL database and `maas-db-config` secret are configured in xref:04-maas-platform.adoc[Phase 4]. You can verify it after completing Phase 4.
 
 === Check DSCInitialization
 

@@ -149,11 +149,11 @@ API_KEY=$(curl -sk -X POST "https://${MAAS_URL}/maas-api/v1/api-keys" \
   -d '{"name": "test-key"}' | jq -r '.key')
 
 # List available models
-curl -sk "https://${MAAS_URL}/v1/models" \
+curl -sk "https://${MAAS_URL}/maas-api/v1/models" \
   -H "Authorization: Bearer ${API_KEY}"
 
 # Get the model endpoint URL from the listing
-MODEL_URL=$(curl -sk "https://${MAAS_URL}/v1/models" \
+MODEL_URL=$(curl -sk "https://${MAAS_URL}/maas-api/v1/models" \
   -H "Authorization: Bearer ${API_KEY}" | jq -r '.data[0].url')
 
 # Send a chat completion request (uses the model-specific URL path)

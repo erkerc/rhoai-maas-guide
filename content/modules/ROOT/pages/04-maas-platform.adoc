@@ -68,50 +68,14 @@ oc apply -f manifests/04-maas-platform/postgres-service.yaml
 oc apply -f manifests/04-maas-platform/postgres-deployment.yaml
 ----
 
-=== Step 3: Create the MaaS Gateway
+=== Step 3: Verify the MaaS Gateway
 
-Detect cluster domain and TLS certificate, then create the Gateway:
+The MaaS Gateway was created in xref:02-platform-config.adoc#_step_5_maas_gateway[Phase 2, Step 5]. Verify it is programmed:
 
 [source,bash]
 ----
-CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
-CERT_NAME=$(oc get ingresscontroller default -n openshift-ingress-operator \
-  -o jsonpath='{.spec.defaultCertificate.name}' 2>/dev/null)
-CERT_NAME=${CERT_NAME:-router-certs-default}
-
-oc apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: maas-default-gateway
-  namespace: openshift-ingress
-  annotations:
-    opendatahub.io/managed: "false"
-    security.opendatahub.io/authorino-tls-bootstrap: "true"
-spec:
-  gatewayClassName: openshift-default
-  listeners:
-    - name: http
-      hostname: maas.${CLUSTER_DOMAIN}
-      port: 80
-      protocol: HTTP
-      allowedRoutes:
-        namespaces:
-          from: All
-    - name: https
-      hostname: maas.${CLUSTER_DOMAIN}
-      port: 443
-      protocol: HTTPS
-      allowedRoutes:
-        namespaces:
-          from: All
-      tls:
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: ${CERT_NAME}
-        mode: Terminate
-EOF
+oc wait --for=condition=Programmed gateway/maas-default-gateway \
+  -n openshift-ingress --timeout=60s
 ----
 
 === Step 4: Configure Authorino TLS
@@ -120,7 +84,7 @@ Set environment variables on the Authorino deployment so it uses TLS when commun
 
 [source,bash]
 ----
-AUTHORINO_NS="rh-connectivity-link"
+AUTHORINO_NS="kuadrant-system"
 
 oc set env deployment/authorino -n "${AUTHORINO_NS}" \
   AUTHORINO_OPA_ENABLED=false \
@@ -176,7 +140,7 @@ oc wait --for=condition=Programmed gateway/maas-default-gateway \
 [source,bash]
 ----
 # Verify env vars are set on the Authorino deployment
-oc get deployment authorino -n rh-connectivity-link \
+oc get deployment authorino -n kuadrant-system \
   -o jsonpath='{.spec.template.spec.containers[0].env}' | jq .
 ----
 
@@ -188,6 +152,8 @@ The maas-controller auto-creates a `default-tenant` CR in the `models-as-a-servi
 ----
 oc get tenant default-tenant -n models-as-a-service
 ----
+
+NOTE: The `default-tenant` CR may show `Ready=False` with reason `DeploymentsNotReady` at this stage. This is expected — it will become `Ready=True` after a model is deployed in xref:05-maas-models.adoc[Phase 5].
 
 === MaaS health endpoint
 

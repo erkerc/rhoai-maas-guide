@@ -96,6 +96,8 @@ oc apply -k manifests/02-platform-config/uwm/
 
 Wait for the user-workload monitoring stack to start:
 
+TIP: The `prometheus-operator` deployment may take 10-20 seconds to appear after applying the ConfigMap. If the wait command returns "not found", retry after a few seconds.
+
 [source,bash]
 ----
 oc wait --for=condition=Available deployment/prometheus-operator \
@@ -182,9 +184,16 @@ oc wait --for=condition=Programmed gateway/maas-default-gateway \
   -n openshift-ingress --timeout=120s
 ----
 
-[NOTE]
+[IMPORTANT]
 ====
-*Non-cloud clusters (baremetal/OpenStack/RHPDS/SNO):* If the Gateway stays in `AddressNotAssigned` because no cloud load-balancer provisions an external IP, you need *MetalLB* to assign a LoadBalancer IP. See xref:01-prerequisites.adoc[Phase 1: MetalLB for Non-Cloud Clusters].
+*Non-cloud clusters (baremetal/OpenStack/RHPDS/SNO):* If the Gateway stays in `AddressNotAssigned` because no cloud load-balancer provisions an external IP, you need *MetalLB* to assign a LoadBalancer IP. Check your platform type:
+
+[source,bash]
+----
+oc get infrastructure cluster -o jsonpath='{.status.platform}'
+----
+
+If this returns `None`, `OpenStack`, or `BareMetal`, you *must* install MetalLB. See xref:01-prerequisites.adoc[Phase 1: MetalLB for Non-Cloud Clusters].
 
 After MetalLB is installed with an IPAddressPool, the Gateway service will receive an external IP and reach `Programmed=True`.
 

@@ -21,6 +21,8 @@ The `verify.sh` script runs 6 phases:
 
 == Usage
 
+WARNING: The verification script deploys its own temporary simulator model and cleans up *all* test resources during the cleanup phase — including any simulator you deployed in xref:05-maas-models.adoc[Phase 5]. Use `--no-cleanup` to keep resources, or re-deploy your model after running verification.
+
 [source,bash]
 ----
 # Full verification (deploy, test, cleanup)

@@ -111,8 +111,10 @@ oc wait csv -n metallb-system -l operators.coreos.com/metallb-operator.metallb-s
 # Create MetalLB instance
 oc apply -f manifests/01-prerequisites/metallb/metallb.yaml
 
-# Create IPAddressPool + L2Advertisement (adjust IP range for your network)
-export METALLB_IP_RANGE="192.168.1.240-192.168.1.240"
+# Create IPAddressPool + L2Advertisement
+# For SNO clusters, use the node's internal IP:
+export METALLB_IP_RANGE="$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')-$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
+# For multi-node clusters, adjust the range to an unused IP range on your network
 envsubst < manifests/04-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
 ----
 
@@ -121,6 +123,8 @@ envsubst < manifests/04-maas-platform/openshift-gateway-setup/metallb-config.yam
 === Wait for Operator CSVs to Succeed
 
 After applying the subscriptions, wait for each operator's ClusterServiceVersion to reach the `Succeeded` phase.
+
+TIP: Operator CSVs take 30-60 seconds to appear after applying subscriptions. If `oc wait` returns "no matching resources found", wait a minute and retry.
 
 *Required operators:*
 
@@ -172,7 +176,7 @@ oc get crd certificates.cert-manager.io
 oc get crd istios.sailoperator.io
 
 # Leader Worker Set
-oc get crd leaderworkersets.leaderworkerset.x-k8s.io
+oc get crd leaderworkersetoperators.operator.openshift.io
 ----
 
 === Quick Status Check
