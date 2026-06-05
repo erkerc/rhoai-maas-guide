@@ -104,17 +104,31 @@ Wait for the MetalLB CSV to succeed, then create the MetalLB CR and configure an
 
 [source,bash]
 ----
-# Wait for MetalLB operator
 oc wait csv -n metallb-system -l operators.coreos.com/metallb-operator.metallb-system="" \
   --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s
+----
 
-# Create MetalLB instance
+Create MetalLB instance
+
+[source,bash]
+----
 oc apply -f manifests/01-prerequisites/metallb/metallb.yaml
+----
 
-# Create IPAddressPool + L2Advertisement
-# For SNO clusters, use the node's internal IP:
+Create IPAddressPool + L2Advertisement.  
+
+[NOTE]
+====
+The following instruction is for SNO clusters and uses the node’s internal IP. +
+For multi-node clusters, adjust the range in `METALLB_IP_RANGE` to an unused IP range on your network.
+====
+
+[source,bash]
+----
 export METALLB_IP_RANGE="$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')-$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
-# For multi-node clusters, adjust the range to an unused IP range on your network
+
+echo $METALLB_IP_RANGE
+
 envsubst < manifests/03-maas-platform/openshift-gateway-setup/metallb-config.yaml | oc apply -f -
 ----
 
@@ -188,6 +202,8 @@ List all operator subscriptions and their current CSVs:
 oc get subscriptions.operators.coreos.com -A \
   -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,CSV:.status.currentCSV,STATE:.status.state'
 ----
+
+= Appendix:
 
 == Directory Structure
 

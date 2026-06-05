@@ -40,7 +40,9 @@ On subsequent runs (CRDs already exist), `oc apply -k manifests/04-rhoai-config/
 
 === Wait for DSC conditions
 
-The DataScienceCluster reconciles multiple components. Wait for KServe and the Model Controller (MaaS) to reach Ready:
+The DataScienceCluster reconciles multiple components. Wait for `KServe` and the `Model Controller` (MaaS) to reach Ready:
+
+NOTE: Some components such as `Trainer` may not reach Ready status. This is expected and is not a problem.
 
 [source,bash]
 ----
@@ -60,12 +62,15 @@ The operator installs MaaS CRDs when `modelsAsService` is set to Managed:
 [source,bash]
 ----
 oc get crd | grep maas.opendatahub.io
-# Expected CRDs:
-#   maasauthpolicies.maas.opendatahub.io
-#   maasmodelrefs.maas.opendatahub.io
-#   maassubscriptions.maas.opendatahub.io
-#   tenants.maas.opendatahub.io
 ----
+
+Expected CRDs:
+
+* maasauthpolicies.maas.opendatahub.io
+* maasmodelrefs.maas.opendatahub.io
+* maassubscriptions.maas.opendatahub.io
+* tenants.maas.opendatahub.io
+
 
 === Check maas-api deployment
 
