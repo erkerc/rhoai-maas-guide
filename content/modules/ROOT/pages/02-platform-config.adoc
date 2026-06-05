@@ -237,25 +237,25 @@ oc wait --for=condition=Programmed gateway/maas-default-gateway
 ---
 Step 5d: Create Passthrough Route (Non-Cloud Platforms Only)
 
-If your platform type from Step 5a was None, BareMetal, or OpenStack, you must create a passthrough Route. This routes external traffic through the OpenShift ingress controller to the
-Gateway's LoadBalancer service.
+If your platform type from Step 5a was `None`, `BareMetal`, or `OpenStack`, you must create a passthrough Route. This routes external traffic through the OpenShift ingress controller to the Gateway's LoadBalancer service.
+
+NOTE: If your platform type from Step 5a was `AWS`, `Azure`, `GCP`, or another cloud provider, you can skip this step.
 
 [source,bash]
-
+----
 export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster
   -o jsonpath='{.spec.domain}')
 
 envsubst '${CLUSTER_DOMAIN}' < manifests/03-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
+----
 
 [NOTE]
 
 Why is this needed?
 
-On non-cloud platforms, the Gateway's LoadBalancer service receives an IP from MetalLB (e.g., 10.10.10.10), but that IP is only routable within the cluster network. External traffic
-cannot reach it directly.
+On non-cloud platforms, the Gateway's LoadBalancer service receives an IP from MetalLB (e.g., 10.10.10.10), but that IP is only routable within the cluster network. External traffic cannot reach it directly.
 
-The passthrough Route bridges external requests (via the OpenShift router at your cluster's public DNS) to the internal LoadBalancer IP, allowing the Gateway to be accessible from 
-outside the cluster.
+The passthrough Route bridges external requests (via the OpenShift router at your cluster's public DNS) to the internal LoadBalancer IP, allowing the Gateway to be accessible from outside the cluster.
 
 Verify the Route was created:
 
@@ -291,6 +291,13 @@ oc get gatewayclass openshift-default
 
 # Gateway programmed
 oc get gateway maas-default-gateway -n openshift-ingress
+
+# Check passthrough route exists (bare metal, Open Stack or None platform type)
+oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
+
+# Verify TLS connection to the Gateway
+CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
 ----
 
 Expected output:
@@ -321,6 +328,14 @@ openshift-default   openshift.io/gateway-controller/v1   True       23m
 $ oc get gateway maas-default-gateway -n openshift-ingress
 NAME                   CLASS               ADDRESS       PROGRAMMED   AGE
 maas-default-gateway   openshift-default   10.10.10.10   True         13m
+
+# (If you created a passthrough route in Step 5d)
+$ oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
+True
+
+$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+$ curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / x25519 / RSASSA-PSS
 ----
 
 == References
