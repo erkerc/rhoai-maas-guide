@@ -221,3 +221,4 @@ __marimo__/
 www/
 .cache/antora/
 node_modules/
+rhoai-maas-guide.code-workspace

@@ -12,7 +12,19 @@ Apply each step in order and wait for the status gates before proceeding to the 
 
 == Step 1: Kuadrant and Authorino
 
+Kuadrant provides authentication (Authorino) and rate limiting (Limitador) for MaaS API endpoints. These three configurations:
+
+* Create the `kuadrant-system` namespace
+* Pre-configure the Authorino Service with a service-ca annotation to auto-generate a TLS certificate (`authorino-server-cert`) for secure Gateway-to-Authorino communication
+* Deploy the Kuadrant CR with observability enabled, which triggers the Kuadrant operator to install Authorino and Limitador components. The `observability.enable: true` setting ensures
+these components expose metrics that User Workload Monitoring can scrape, which is essential for the optional observability dashboards in Phase 7.
+
+The Kuadrant operator auto-creates an Authorino instance when reconciling the Kuadrant resource. You'll enable TLS on that Authorino instance in the next step.
+
+[Note:]
+====
 Apply the namespace, service annotation, and Kuadrant CR. Do *not* apply the full kustomization in one shot. The Kuadrant operator auto-creates an Authorino CR when it reconciles the Kuadrant resource, so the Authorino CR must be configured separately via `oc patch` after Kuadrant is ready.
+====
 
 [source,bash]
 ----
@@ -42,9 +54,12 @@ oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=180
 
 == Step 2: Configure TLS for Models-as-a-Service
 
-Follow link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas#configure-tls-for-maas_maas-deploy[RHOAI 3.4 docs section 1.4], four steps to enable TLS between the Gateway and Authorino.
+Now that Kuadrant is deployed, we need to update the Authorino CR to enable TLS. (Detailed documentation for this step is available in the link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas#configure-tls-for-maas_maas-deploy[RHOAI 3.4 docs section 1.4]. )
+Follow the four steps below to enable TLS between the Gateway and Authorino.
 
-*Step 2a:* The service annotation (already applied above) triggers the service-ca operator to generate the `authorino-server-cert` TLS Secret:
+Follow the four steps below to enable TLS between the Gateway and Authorino.
+
+*Step 2a:* The service annotation (already applied above) triggered the service-ca operator to generate the `authorino-server-cert` TLS Secret:
 
 [source,bash]
 ----
@@ -146,73 +161,114 @@ openshift-default   openshift.io/gateway-controller/v1   True       ...
 
 == Step 5: MaaS Gateway
 
-The Gateway uses cluster-specific values (domain and TLS cert name), so it is provided as an envsubst template. Detect the values, render the template, and apply.
+The Gateway uses cluster-specific values (domain and TLS cert name), so it is provided as an `envsubst` template. Here we will extract the values, render the template, and apply them.
 
-Detect the cluster domain and TLS certificate name:
+Step 5a: Check Your Platform Type
+
+Before creating the Gateway, determine if your cluster requires additional configuration for non-cloud platforms:
+
+[source,bash]
+
+oc get infrastructure cluster -o jsonpath='{.status.platform}'
+
+If the output is `AWS`, `Azure`, `GCP`, or another cloud provider: Skip to Step 5b (create Gateway).
+
+If the output is `None`, `BareMetal`, or `OpenStack`: Your cluster is running on a non-cloud platform and requires MetalLB and a passthrough Route. Continue below.
+
+---
+Step 5a.1: Verify MetalLB is Installed (Non-Cloud Platforms Only)
+
+Check if MetalLB is installed:
+
+[source,bash]
+
+oc get deployment metallb-operator-controller-manager -n metallb-system 2>/dev/null
+
+If you see "NotFound" or "Error":
+
+[WARNING]
+
+MetalLB is not installed. Without it, the Gateway will never reach Programmed=True because there is no cloud load balancer to assign an external IP.
+
+You must go back and complete: xref:01-prerequisites.adoc#_optional_metallb_operator_non_cloud_clusters[Phase 1: MetalLB for Non-Cloud Clusters]
+
+After installing MetalLB and configuring an IPAddressPool, return to this step.
+
+If MetalLB is installed: Continue to the next step.
+
+---
+Step 5b: Create the MaaS Gateway
 
 [source,bash]
 ----
-export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster \
+export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster
   -o jsonpath='{.spec.domain}')
-
-export CERT_NAME=$(oc get ingresscontroller default \
-  -n openshift-ingress-operator \
-  -o jsonpath='{.spec.defaultCertificate.name}' 2>/dev/null)
-export CERT_NAME="${CERT_NAME:-router-certs-default}"
+echo $CLUSTER_DOMAIN
 ----
 
-Render and apply:
+[source,bash]
+----
+export CERT_NAME=$(oc get ingresscontroller default 
+  -n openshift-ingress-operator
+  -o jsonpath='{.spec.defaultCertificate.name}' 2>/dev/null)
+export CERT_NAME="${CERT_NAME:-router-certs-default}"
+echo $CERT_NAME
+----
 
 [source,bash]
 ----
 envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < manifests/02-platform-config/gateway.yaml.tmpl | oc apply -f -
 ----
 
-*Step 2d:* Annotate the Gateway for Authorino TLS bootstrap (docs section 1.4, step 4):
+Step 5c: Annotate the Gateway for Authorino TLS bootstrap:
 
 [source,bash]
-----
-oc annotate gateway maas-default-gateway -n openshift-ingress \
+
+oc annotate gateway maas-default-gateway -n openshift-ingress 
   security.opendatahub.io/authorino-tls-bootstrap="true" --overwrite
-----
 
 Wait for the Gateway to be programmed:
 
 [source,bash]
-----
-oc wait --for=condition=Programmed gateway/maas-default-gateway \
+
+oc wait --for=condition=Programmed gateway/maas-default-gateway 
   -n openshift-ingress --timeout=120s
-----
 
-[IMPORTANT]
-====
-*Non-cloud clusters (baremetal/OpenStack/RHPDS/SNO):* If the Gateway stays in `AddressNotAssigned` because no cloud load-balancer provisions an external IP, you need *MetalLB* to assign a LoadBalancer IP. Check your platform type:
+---
+Step 5d: Create Passthrough Route (Non-Cloud Platforms Only)
 
-[source,bash]
-----
-oc get infrastructure cluster -o jsonpath='{.status.platform}'
-----
+If your platform type from Step 5a was `None`, `BareMetal`, or `OpenStack`, you must create a passthrough Route. This routes external traffic through the OpenShift ingress controller to the Gateway's LoadBalancer service.
 
-If this returns `None`, `OpenStack`, or `BareMetal`, you *must* install MetalLB. See xref:01-prerequisites.adoc[Phase 1: MetalLB for Non-Cloud Clusters].
-
-After MetalLB is installed with an IPAddressPool, the Gateway service will receive an external IP and reach `Programmed=True`.
-
-Additionally, create a passthrough Route to make the Gateway reachable via the cluster's DNS:
+NOTE: If your platform type from Step 5a was `AWS`, `Azure`, `GCP`, or another cloud provider, you can skip this step.
 
 [source,bash]
 ----
+export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster
+  -o jsonpath='{.spec.domain}')
+
 envsubst '${CLUSTER_DOMAIN}' < manifests/03-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
 ----
 
-This routes traffic through the existing OpenShift ingress controller.
-====
+[NOTE]
 
-Verify:
+Why is this needed?
+
+On non-cloud platforms, the Gateway's LoadBalancer service receives an IP from MetalLB (e.g., 10.10.10.10), but that IP is only routable within the cluster network. External traffic cannot reach it directly.
+
+The passthrough Route bridges external requests (via the OpenShift router at your cluster's public DNS) to the internal LoadBalancer IP, allowing the Gateway to be accessible from outside the cluster.
+
+Verify the Route was created:
 
 [source,bash]
-----
-oc get gateway maas-default-gateway -n openshift-ingress
-----
+
+oc get route maas-default-gateway-https -n openshift-ingress
+
+Expected output:
+[source]
+
+NAME                          HOST/PORT                              PATH   SERVICES                                   PORT    TERMINATION   WILDCARD
+maas-default-gateway-https   maas.apps.                    maas-default-gateway-openshift-default     https   passthrough   None
+
 
 == Verification
 
@@ -235,6 +291,51 @@ oc get gatewayclass openshift-default
 
 # Gateway programmed
 oc get gateway maas-default-gateway -n openshift-ingress
+
+# Check passthrough route exists (bare metal, Open Stack or None platform type)
+oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
+
+# Verify TLS connection to the Gateway
+CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
+----
+
+Expected output:
+
+[source]
+----
+$ oc get kuadrant -n kuadrant-system
+NAME       MTLS AUTHORINO   MTLS LIMITADOR   AGE
+kuadrant   false            false            49m
+
+$ oc get deployment authorino -n kuadrant-system
+oc get secret authorino-server-cert -n kuadrant-system
+NAME        READY   UP-TO-DATE   AVAILABLE   AGE
+authorino   1/1     1            1           49m
+NAME                    TYPE                DATA   AGE
+authorino-server-cert   kubernetes.io/tls   2      49m
+
+$ oc get pods -n openshift-user-workload-monitoring
+NAME                                   READY   STATUS    RESTARTS   AGE
+prometheus-operator-76b9c6d5dc-rrvn8   2/2     Running   0          23m
+prometheus-user-workload-0             6/6     Running   0          23m
+thanos-ruler-user-workload-0           4/4     Running   0          23m
+
+$ oc get gatewayclass openshift-default
+NAME                CONTROLLER                           ACCEPTED   AGE
+openshift-default   openshift.io/gateway-controller/v1   True       23m
+
+$ oc get gateway maas-default-gateway -n openshift-ingress
+NAME                   CLASS               ADDRESS       PROGRAMMED   AGE
+maas-default-gateway   openshift-default   10.10.10.10   True         13m
+
+# (If you created a passthrough route in Step 5d)
+$ oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
+True
+
+$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+$ curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / x25519 / RSASSA-PSS
 ----
 
 == References
