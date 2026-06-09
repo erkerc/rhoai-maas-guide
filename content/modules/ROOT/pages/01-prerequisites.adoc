@@ -91,9 +91,22 @@ If your cluster has GPU nodes (or you plan to add them), install the GPU operato
 oc apply -k manifests/01-prerequisites/gpu/
 ----
 
-=== Step 3 (Optional): Install MetalLB for Non-Cloud Clusters
+=== Step 3 Install MetalLB for Non-Cloud Clusters - Non-Cloud Platforms Only
 
-If your cluster is baremetal, OpenStack, or a RHPDS/SNO environment (no cloud LB controller), install MetalLB:
+NOTE: Read this section carefully!
+
+If your cluster is `baremetal`, `OpenStack`, or a `RHPDS/SNO` environment (i.e. no cloud LB controller), you will need to do some extra configuration to make the Gateway accessible from outside the cluster.
+
+First, let's determine the platform type of your cluster.
+
+[source,bash]
+----
+oc get infrastructure cluster -o jsonpath='{.status.platform}'
+----
+
+If the output is `AWS`, `Azure`, `GCP`, or another cloud provider: Skip to Step `Verification` below.
+
+If the output is `None`, `BareMetal`, or `OpenStack`: Your cluster is running on a non-cloud platform and requires `MetalLB` and a `passthrough Route`. Continue below.
 
 [source,bash]
 ----
@@ -119,7 +132,7 @@ Create IPAddressPool + L2Advertisement.
 
 [NOTE]
 ====
-The following instruction is for SNO clusters and uses the node’s internal IP. +
+The following instruction is for SNO clusters and uses the node's internal IP. +
 For multi-node clusters, adjust the range in `METALLB_IP_RANGE` to an unused IP range on your network.
 ====
 
@@ -201,6 +214,21 @@ List all operator subscriptions and their current CSVs:
 ----
 oc get subscriptions.operators.coreos.com -A \
   -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,CSV:.status.currentCSV,STATE:.status.state'
+----
+
+Expected Results:
+
+[source]
+----
+NAMESPACE                NAME                                                                                   CSV                                                STATE
+cert-manager-operator    openshift-cert-manager-operator                                                        cert-manager-operator.v1.19.0                      AtLatestKnown
+metallb-system           metallb-operator                                                                       metallb-operator.v4.20.0-202605260442              AtLatestKnown
+openshift-lws-operator   leader-worker-set                                                                      leader-worker-set.v1.0.0                           AtLatestKnown
+openshift-operators      authorino-operator-stable-redhat-operators-openshift-marketplace                       authorino-operator.v1.3.1                          AtLatestKnown
+openshift-operators      limitador-operator-stable-redhat-operators-openshift-marketplace                       limitador-operator.v1.3.1                          AtLatestKnown
+openshift-operators      rhcl-operator                                                                          rhcl-operator.v1.3.4                               AtLatestKnown
+openshift-operators      servicemeshoperator3                                                                   servicemeshoperator3.v3.3.3                        AtLatestKnown
+
 ----
 
 = Appendix:
