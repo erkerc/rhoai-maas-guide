@@ -201,15 +201,15 @@ Step 5b: Create the MaaS Gateway
 
 [source,bash]
 ----
-export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster
+export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster \
   -o jsonpath='{.spec.domain}')
 echo $CLUSTER_DOMAIN
 ----
 
 [source,bash]
 ----
-export CERT_NAME=$(oc get ingresscontroller default 
-  -n openshift-ingress-operator
+export CERT_NAME=$(oc get ingresscontroller default \
+  -n openshift-ingress-operator \
   -o jsonpath='{.spec.defaultCertificate.name}' 2>/dev/null)
 export CERT_NAME="${CERT_NAME:-router-certs-default}"
 echo $CERT_NAME
@@ -224,14 +224,14 @@ Step 5c: Annotate the Gateway for Authorino TLS bootstrap:
 
 [source,bash]
 
-oc annotate gateway maas-default-gateway -n openshift-ingress 
+oc annotate gateway maas-default-gateway -n openshift-ingress \
   security.opendatahub.io/authorino-tls-bootstrap="true" --overwrite
 
 Wait for the Gateway to be programmed:
 
 [source,bash]
 
-oc wait --for=condition=Programmed gateway/maas-default-gateway 
+oc wait --for=condition=Programmed gateway/maas-default-gateway \
   -n openshift-ingress --timeout=120s
 
 ---
@@ -333,7 +333,7 @@ maas-default-gateway   openshift-default   10.10.10.10   True         13m
 $ oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
 True
 
-$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
 $ curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
 * SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / x25519 / RSASSA-PSS
 ----
