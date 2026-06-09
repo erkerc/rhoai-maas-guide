@@ -12,7 +12,14 @@ Verify the operator is ready before proceeding:
 [source,bash]
 ----
 oc get csv -n redhat-ods-operator | grep rhods-operator
-# STATUS should be "Succeeded"
+----
+
+Expected output:
+
+[source]
+----
+NAME                DISPLAY                    VERSION   REPLICA   PHASE       AGE
+rhods-operator       Red Hat OpenShift AI       3.4.0     1         Succeeded   25m
 ----
 
 == Apply
@@ -23,10 +30,32 @@ On a fresh install, apply in two stages. The `OdhDashboardConfig` CRD does not e
 ----
 # Stage 1: DSC and DSCI (triggers operator reconciliation)
 oc apply -f manifests/04-rhoai-config/dscinitialization.yaml
+----
+
+Wait until the DCSI is created:
+
+[source,bash]
+----
+oc wait --for=jsonpath='{.status.phase}'=Ready \
+  dscinitialization/default-dsci --timeout=600s
+----
+
+Create the Data Science Cluster:
+
+[source,bash]
+----
 oc apply -f manifests/04-rhoai-config/datasciencecluster.yaml
 ----
 
-Wait for the operator to reconcile and register all CRDs (see Verify section below), then apply the dashboard config:
+The DataScienceCluster reconciles multiple components. Wait for `KServe` and the `Model Controller` (MaaS) to reach Ready: +
+
+[source,bash]
+----
+oc wait --for=jsonpath='{.status.phase}'=Ready \
+  datasciencecluster/default-dsc --timeout=600s
+----
+
+With the Data Science Cluster created we can not apply the dashboard configuration:
 
 [source,bash]
 ----
@@ -34,9 +63,11 @@ Wait for the operator to reconcile and register all CRDs (see Verify section bel
 oc apply -f manifests/04-rhoai-config/odh-dashboard-config.yaml
 ----
 
-On subsequent runs (CRDs already exist), `oc apply -k manifests/04-rhoai-config/` works in one shot.
+NOTE: On subsequent runs (CRDs already exist), `oc apply -k manifests/04-rhoai-config/` works in one shot.
 
 == Verify
+
+REVISIT: This section is repeating tests above. Delete it???
 
 === Wait for DSC conditions
 

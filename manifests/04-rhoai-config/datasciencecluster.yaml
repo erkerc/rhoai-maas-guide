@@ -43,7 +43,7 @@ spec:
       managementState: Managed
     # -- Trainer --
     trainer:
-      managementState: Managed
+      managementState: Removed
     # -- Training Operator --
     trainingoperator:
       managementState: Managed
