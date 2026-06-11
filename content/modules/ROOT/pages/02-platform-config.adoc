@@ -128,6 +128,16 @@ oc get pods -n openshift-user-workload-monitoring
 
 You should see `prometheus-user-workload-0` and `thanos-ruler-user-workload-0` pods in Running state.
 
+Expected output: 
+
+[source]
+----
+NAME                                   READY   STATUS    RESTARTS   AGE
+prometheus-operator-76b9c6d5dc-rrvn8   2/2     Running   0          23m
+prometheus-user-workload-0             6/6     Running   0          23m
+thanos-ruler-user-workload-0           4/4     Running   0          23m
+----
+
 == Step 4: GatewayClass
 
 Apply the GatewayClass that initializes OpenShift's built-in Gateway API controller:
@@ -223,18 +233,19 @@ envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < manifests/02-platform-config/gateway
 Step 5c: Annotate the Gateway for Authorino TLS bootstrap:
 
 [source,bash]
-
+----
 oc annotate gateway maas-default-gateway -n openshift-ingress \
   security.opendatahub.io/authorino-tls-bootstrap="true" --overwrite
+----
 
 Wait for the Gateway to be programmed:
 
 [source,bash]
-
+----
 oc wait --for=condition=Programmed gateway/maas-default-gateway \
   -n openshift-ingress --timeout=120s
+----
 
----
 Step 5d: Create Passthrough Route (Non-Cloud Platforms Only)
 
 If your platform type from Step 5a was `None`, `BareMetal`, or `OpenStack`, you must create a passthrough Route. This routes external traffic through the OpenShift ingress controller to the Gateway's LoadBalancer service.
@@ -243,7 +254,7 @@ NOTE: If your platform type from Step 5a was `AWS`, `Azure`, `GCP`, or another c
 
 [source,bash]
 ----
-export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster
+export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster \
   -o jsonpath='{.spec.domain}')
 
 envsubst '${CLUSTER_DOMAIN}' < manifests/03-maas-platform/openshift-gateway-setup/route.yaml.tmpl | oc apply -f -
@@ -296,7 +307,8 @@ oc get gateway maas-default-gateway -n openshift-ingress
 oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
 
 # Verify TLS connection to the Gateway
-CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
+echo $CLUSTER_DOMAIN
 curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
 ----
 
@@ -333,8 +345,10 @@ maas-default-gateway   openshift-default   10.10.10.10   True         13m
 $ oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
 True
 
-$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
-$ curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
+$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+$ echo $CLUSTER_DOMAIN
+apps.`<your cluster name>`.`<your domain>`
+curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
 * SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / x25519 / RSASSA-PSS
 ----
 
