@@ -32,7 +32,7 @@ On a fresh install, apply in two stages. The `OdhDashboardConfig` CRD does not e
 oc apply -f manifests/04-rhoai-config/dscinitialization.yaml
 ----
 
-Wait until the DCSI is created:
+Wait until the DCSI is created (this step must complete before creating the DSC):
 
 [source,bash]
 ----
@@ -66,25 +66,6 @@ oc apply -f manifests/04-rhoai-config/odh-dashboard-config.yaml
 NOTE: On subsequent runs (CRDs already exist), `oc apply -k manifests/04-rhoai-config/` works in one shot.
 
 == Verify
-
-REVISIT: This section is repeating tests above. Delete it???
-
-=== Wait for DSC conditions
-
-The DataScienceCluster reconciles multiple components. Wait for `KServe` and the `Model Controller` (MaaS) to reach Ready:
-
-NOTE: Some components such as `Trainer` may not reach Ready status. This is expected and is not a problem.
-
-[source,bash]
-----
-# Wait for KServe to be ready (up to 5 minutes)
-oc wait --for=jsonpath='{.status.conditions[?(@.type=="KserveReady")].status}'=True \
-  datasciencecluster/default-dsc --timeout=300s
-
-# Wait for Model Controller (MaaS) to be ready (up to 5 minutes)
-oc wait --for=jsonpath='{.status.conditions[?(@.type=="ModelControllerReady")].status}'=True \
-  datasciencecluster/default-dsc --timeout=300s
-----
 
 === Check MaaS CRDs are installed
 
