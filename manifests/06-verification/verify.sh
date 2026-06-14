@@ -134,6 +134,34 @@ if [ "$CLEANUP_ONLY" = true ]; then
 fi
 
 # =============================================================================
+# Pre-check: Gateway pod health (detect and fix OOMKill)
+# =============================================================================
+check_and_fix_gateway_oom() {
+    local deploy_name="$1"
+    local restarts crash_reason mem_limit
+
+    restarts=$(oc get pods -n openshift-ingress -l "gateway.networking.k8s.io/gateway-name=maas-default-gateway" \
+        -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}' 2>/dev/null || echo "0")
+    crash_reason=$(oc get pods -n openshift-ingress -l "gateway.networking.k8s.io/gateway-name=maas-default-gateway" \
+        -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.reason}' 2>/dev/null || echo "")
+
+    if [ "$crash_reason" = "OOMKilled" ] || [ "${restarts:-0}" -ge 3 ]; then
+        mem_limit=$(oc get deployment "$deploy_name" -n openshift-ingress \
+            -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>/dev/null || echo "")
+
+        if [ "$mem_limit" = "1Gi" ]; then
+            log_warn "Gateway pod has OOMKilled ($restarts restarts). Patching memory limit from 1Gi to 2Gi..."
+            oc patch deployment "$deploy_name" -n openshift-ingress \
+                --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"2Gi"}]' 2>/dev/null || true
+
+            log_info "Waiting for gateway pod to stabilize..."
+            sleep 10
+            oc wait --for=condition=Available deployment/"$deploy_name" -n openshift-ingress --timeout=90s 2>/dev/null || true
+        fi
+    fi
+}
+
+# =============================================================================
 # Phase 1: Infrastructure Health
 # =============================================================================
 log_step "Phase 1: Infrastructure health checks"
@@ -157,6 +185,9 @@ if [ "$GATEWAY_PROGRAMMED" = "True" ]; then
 else
     log_fail "Gateway not Programmed (status: $GATEWAY_PROGRAMMED)"
 fi
+
+# Check and auto-fix gateway OOMKill
+check_and_fix_gateway_oom "maas-default-gateway-openshift-default"
 
 # PostgreSQL
 PG_READY=$(oc get deployment postgres -n "$NAMESPACE" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
@@ -208,15 +239,25 @@ if [ -n "$GATEWAY_ADDR" ]; then
     fi
 fi
 
-HEALTH_CODE=$(curl -sSk --connect-timeout 10 --max-time 30 \
-    ${GATEWAY_IP:+--resolve "maas.${CLUSTER_DOMAIN}:443:${GATEWAY_IP}"} \
-    -o /dev/null -w '%{http_code}' \
-    "${HOST}/maas-api/health" 2>/dev/null || echo "000")
+HEALTH_CODE="000"
+for attempt in 1 2 3; do
+    HEALTH_CODE=$(curl -sSk --connect-timeout 10 --max-time 30 \
+        ${GATEWAY_IP:+--resolve "maas.${CLUSTER_DOMAIN}:443:${GATEWAY_IP}"} \
+        -o /dev/null -w '%{http_code}' \
+        "${HOST}/maas-api/health" 2>/dev/null || echo "000")
+    if [ "$HEALTH_CODE" = "200" ]; then
+        break
+    fi
+    if [ "$attempt" -lt 3 ]; then
+        log_warn "Health endpoint returned HTTP $HEALTH_CODE, retrying in 10s (attempt $attempt/3)..."
+        sleep 10
+    fi
+done
 
 if [ "$HEALTH_CODE" = "200" ]; then
     log_pass "Health endpoint returns HTTP 200"
 elif [ "$HEALTH_CODE" = "000" ]; then
-    log_fail "Health endpoint unreachable (DNS may still be propagating)"
+    log_fail "Health endpoint unreachable (DNS may still be propagating, or gateway pod is restarting)"
     log_warn "Try: curl -sk --resolve 'maas.${CLUSTER_DOMAIN}:443:<ELB_IP>' ${HOST}/maas-api/health"
 else
     log_warn "Health endpoint returned HTTP $HEALTH_CODE (expected 200)"
@@ -436,17 +477,30 @@ fi
 # =============================================================================
 log_step "Phase 3: API verification"
 
-# Create API key
+# Create API key (with retry for transient gateway restarts)
 log_info "Creating API key..."
-API_KEY_RESPONSE=$(maas_curl \
-    -H "Authorization: Bearer $(oc whoami -t)" \
-    -H "Content-Type: application/json" \
-    -X POST \
-    -d '{"name": "verify-test-key", "description": "Verification test key", "expiresIn": "1h", "subscription": "simulator-subscription"}' \
-    "${HOST}/maas-api/v1/api-keys" 2>/dev/null || echo "{}")
+API_KEY=""
+API_KEY_ID=""
+API_KEY_RESPONSE=""
+for attempt in 1 2 3; do
+    API_KEY_RESPONSE=$(maas_curl \
+        -H "Authorization: Bearer $(oc whoami -t)" \
+        -H "Content-Type: application/json" \
+        -X POST \
+        -d '{"name": "verify-test-key", "description": "Verification test key", "expiresIn": "1h", "subscription": "simulator-subscription"}' \
+        "${HOST}/maas-api/v1/api-keys" 2>/dev/null || echo "{}")
 
-API_KEY=$(echo "$API_KEY_RESPONSE" | jq -r '.key // empty' 2>/dev/null || echo "")
-API_KEY_ID=$(echo "$API_KEY_RESPONSE" | jq -r '.id // empty' 2>/dev/null || echo "")
+    API_KEY=$(echo "$API_KEY_RESPONSE" | jq -r '.key // empty' 2>/dev/null || echo "")
+    API_KEY_ID=$(echo "$API_KEY_RESPONSE" | jq -r '.id // empty' 2>/dev/null || echo "")
+
+    if [ -n "$API_KEY" ] && [ "$API_KEY" != "null" ]; then
+        break
+    fi
+    if [ "$attempt" -lt 3 ]; then
+        log_warn "API key creation failed (attempt $attempt/3), retrying in 15s..."
+        sleep 15
+    fi
+done
 
 if [ -n "$API_KEY" ] && [ "$API_KEY" != "null" ]; then
     log_pass "API key created (id: ${API_KEY_ID})"

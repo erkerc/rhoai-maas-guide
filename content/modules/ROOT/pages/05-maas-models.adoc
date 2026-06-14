@@ -147,7 +147,7 @@ MAAS_URL="maas.${CLUSTER_DOMAIN}"
 API_KEY=$(curl -sk -X POST "https://${MAAS_URL}/maas-api/v1/api-keys" \
   -H "Authorization: Bearer $(oc whoami -t)" \
   -H "Content-Type: application/json" \
-  -d '{"name": "test-key", "subscription": "simulator-subscription", "expiresIn": "1h"}' \
+  -d '{"name": "test-key", "subscription": "simulator-free", "expiresIn": "1h"}' \
   | jq -r '.key')
 
 # List available models

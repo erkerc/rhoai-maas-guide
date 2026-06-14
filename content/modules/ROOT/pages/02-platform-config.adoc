@@ -252,6 +252,36 @@ oc wait --for=condition=Programmed gateway/maas-default-gateway \
   -n openshift-ingress --timeout=120s
 ----
 
+[WARNING]
+====
+*Gateway Pod OOMKilled (CrashLoopBackOff)*
+
+On some clusters, the MaaS gateway pod may enter `CrashLoopBackOff` with `OOMKilled` (exit code 137) shortly after creation. This happens because the Istio Gateway API controller creates the gateway deployment with a default memory limit of `1Gi`, which can be insufficient when Kuadrant Wasm extensions (Authorino auth, Limitador rate limiting) are loaded and compiled at startup.
+
+Check the gateway pod status:
+
+[source,bash]
+----
+oc get pods -n openshift-ingress | grep maas-default-gateway
+----
+
+If the pod shows `CrashLoopBackOff` or multiple restarts with `OOMKilled`, increase the memory limit:
+
+[source,bash]
+----
+oc patch deployment maas-default-gateway-openshift-default -n openshift-ingress \
+  --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"2Gi"}]'
+----
+
+NOTE: The Istio gateway controller may revert this change during reconciliation. If the pod starts OOMKilling again after a reconciliation, re-apply the patch. The `data-science-gateway` pod in the same namespace may also need the same fix:
+
+[source,bash]
+----
+oc patch deployment data-science-gateway-data-science-gateway-class -n openshift-ingress \
+  --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"2Gi"}]'
+----
+====
+
 *Step 5d:* Create Passthrough Route (Non-Cloud Platforms Only)
 
 If your platform type from Step 5a was `None`, `BareMetal`, or `OpenStack`, you must create a passthrough Route. This routes external traffic through the OpenShift ingress controller to the Gateway's LoadBalancer service.

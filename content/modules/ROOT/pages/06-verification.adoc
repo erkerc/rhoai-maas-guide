@@ -102,7 +102,7 @@ HOST="https://maas.${DOMAIN}"
 API_KEY=$(curl -sk -X POST \
   -H "Authorization: Bearer $(oc whoami -t)" \
   -H "Content-Type: application/json" \
-  -d '{"name":"test","expiresIn":"1h","subscription":"simulator-subscription"}' \
+  -d '{"name":"test","expiresIn":"1h","subscription":"simulator-free"}' \
   "${HOST}/maas-api/v1/api-keys" | jq -r '.key')
 echo "API_KEY=${API_KEY}"
 
@@ -139,6 +139,40 @@ for i in $(seq 1 16); do
     "${MODEL_URL}/v1/chat/completions"
 done
 ----
+
+== Troubleshooting
+
+=== Gateway pod OOMKilled (CrashLoopBackOff)
+
+If the verification script fails at Phase 1 (health endpoint unreachable) or Phase 3 (API key creation returns `{}`), check the MaaS gateway pod:
+
+[source,bash]
+----
+oc get pods -n openshift-ingress | grep maas-default-gateway
+----
+
+If the pod shows `CrashLoopBackOff` with multiple restarts, the Kuadrant Wasm extensions may exceed the default `1Gi` memory limit. Patch the deployment:
+
+[source,bash]
+----
+oc patch deployment maas-default-gateway-openshift-default -n openshift-ingress \
+  --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"2Gi"}]'
+----
+
+Wait for the pod to stabilize, then re-run the script.
+
+NOTE: The verification script (v2+) automatically detects and patches this issue. If running an older version, apply the patch manually.
+
+=== Wrong subscription name in API key creation
+
+If the API key creation returns `{"code":"invalid_subscription","error":"Unable to resolve a subscription for this API key"}`, ensure the subscription name matches an existing `MaaSSubscription` resource:
+
+[source,bash]
+----
+oc get maassubscription -n models-as-a-service
+----
+
+The Kustomize-deployed simulator uses `simulator-free` and `simulator-premium`. The verification script creates its own `simulator-subscription`.
 
 == References
 
