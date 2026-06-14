@@ -14,5 +14,8 @@
 .Observability
 * xref:07-observability.adoc[Phase 7: Observability]
 
+.Reference
+* xref:08-architecture.adoc[Architecture & Request Flow]
+
 .Tools
 * xref:claude-code.adoc[AI-Assisted Installation]
