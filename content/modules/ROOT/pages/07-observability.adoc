@@ -64,6 +64,6 @@ oc get telemetry.telemetry.istio.io latency-per-subscription -n openshift-ingres
 
 == References
 
-* link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/monitoring/cluster-observability-operator[Cluster Observability Operator documentation]
-* link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2-latest/html/monitoring_data_science_models/index[RHOAI Observability dashboard]
-* link:https://docs.kuadrant.io/latest/kuadrant-operator/doc/reference/telemetrypolicy/[Kuadrant TelemetryPolicy]
+* link:https://docs.redhat.com/en/documentation/red_hat_openshift_cluster_observability_operator/1-latest[Cluster Observability Operator documentation]
+* link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html-single/govern_llm_access_with_models-as-a-service/index#maas-observability_maas-deploy[RHOAI Observability dashboard]
+* link:https://docs.kuadrant.io/dev/kuadrant-operator/doc/reference/telemetrypolicy/[Kuadrant TelemetryPolicy]
