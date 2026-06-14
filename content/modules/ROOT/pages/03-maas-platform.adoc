@@ -139,6 +139,25 @@ On baremetal/OpenStack clusters without a cloud LB controller:
 * See `openshift-gateway-setup/` for MetalLB configuration
 * On cloud clusters, the LB provisions automatically
 
+== Appendix
+
+=== Directory Structure
+
+[source]
+----
+manifests/03-maas-platform/
+  kustomization.yaml             # Aggregates PostgreSQL resources
+  postgres-deployment.yaml       # PostgreSQL 16 Deployment
+  postgres-pvc.yaml              # 20Gi PersistentVolumeClaim
+  postgres-service.yaml          # ClusterIP Service
+  openshift-gateway-setup/
+    gateway.yaml.tmpl            # Gateway template (envsubst)
+    route.yaml.tmpl              # Passthrough Route (non-cloud)
+    metallb-config.yaml          # IPAddressPool + L2Advertisement
+    cleanup.yaml                 # Cleanup resources
+    kustomization.yaml
+----
+
 == References
 
 * link:https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/install/maas-setup.md[MaaS Setup (upstream)]

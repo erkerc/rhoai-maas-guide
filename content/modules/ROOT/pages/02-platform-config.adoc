@@ -273,7 +273,7 @@ oc patch deployment maas-default-gateway-openshift-default -n openshift-ingress 
   --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"2Gi"}]'
 ----
 
-NOTE: The Istio gateway controller may revert this change during reconciliation. If the pod starts OOMKilling again after a reconciliation, re-apply the patch. The `data-science-gateway` pod in the same namespace may also need the same fix:
+IMPORTANT: The Istio gateway controller will revert this patch within seconds during reconciliation. However, pods that were already created with the 2Gi limit will continue running. If the pods restart for any reason (node drain, scaling, etc.), they will revert to 1Gi and OOMKill again — re-apply the patch in that case. The `data-science-gateway` pod in the same namespace may also need the same fix:
 
 [source,bash]
 ----
@@ -324,6 +324,8 @@ maas-default-gateway-https   maas.apps.<cluster-domain>                    maas-
 == Verification
 
 After completing all steps, confirm the full platform state:
+
+TIP: On macOS, the local DNS resolver may cache negative lookups for `maas.apps.<cluster-domain>`. If `curl` reports "Could not resolve host" but `dig` or `nslookup` resolves the address correctly, either flush your DNS cache (`sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`) or use the `--resolve` flag: `curl -vsk --resolve "maas.${CLUSTER_DOMAIN}:443:$(dig +short maas.${CLUSTER_DOMAIN} | head -1)" https://maas.${CLUSTER_DOMAIN}`.
 
 [source,bash]
 ----
@@ -391,6 +393,27 @@ apps.`<your cluster name>`.`<your domain>`
 curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
 * Connected to maas.apps.<cluster-domain> (...) port 443
 * SSL connection using TLSv1.3 / ...    <-- exact cipher varies by client
+----
+
+== Appendix
+
+=== Directory Structure
+
+[source]
+----
+manifests/02-platform-config/
+  gateway.yaml.tmpl              # Gateway template (envsubst)
+  gatewayclass.yaml              # GatewayClass resource
+  kustomization.yaml             # Aggregates all subdirectories
+  kuadrant/
+    namespace.yaml               # kuadrant-system namespace
+    service-annotation.yaml      # TLS cert annotation for Authorino
+    kuadrant.yaml                # Kuadrant CR
+    authorino.yaml               # Authorino TLS patch
+    kustomization.yaml
+  uwm/
+    cluster-monitoring-config.yaml   # User Workload Monitoring ConfigMap
+    kustomization.yaml
 ----
 
 == References

@@ -26,6 +26,8 @@ rhods-operator.3.4.0     Red Hat OpenShift AI    3.4.0     rhods-operator.3.3.2 
 
 On a fresh install, apply in two stages. The `OdhDashboardConfig` CRD does not exist until the RHOAI operator has reconciled the DataScienceCluster, so applying the full kustomization in one shot will fail the first time.
 
+NOTE: The RHOAI operator auto-creates a `default-dsci` and `odh-dashboard-config` during installation. When you `oc apply` over these auto-created resources, you will see a warning: _"resource is missing the kubectl.kubernetes.io/last-applied-configuration annotation"_. This is harmless — the annotation is patched automatically and subsequent applies will be clean.
+
 [source,bash]
 ----
 # Stage 1: DSC and DSCI (triggers operator reconciliation)
@@ -105,7 +107,7 @@ The maas-controller auto-creates a `default-tenant` CR in the `models-as-a-servi
 oc get tenant default-tenant -n models-as-a-service
 ----
 
-NOTE: The `default-tenant` CR may show `Ready=False` with reason `DeploymentsNotReady` at this stage. This is expected — it will become `Ready=True` after a model is deployed in xref:05-maas-models.adoc[Phase 5].
+NOTE: The `default-tenant` CR may show either `Ready=True` (reason `Reconciled`) or `Ready=False` (reason `DeploymentsNotReady`) at this stage. Both are normal — if it shows `Ready=False`, it will become `Ready=True` after a model is deployed in xref:05-maas-models.adoc[Phase 5].
 
 === MaaS health endpoint
 
@@ -161,6 +163,19 @@ oc logs -n redhat-ods-operator deployment/rhods-operator --tail=100
 
 # Check pods in the applications namespace
 oc get pods -n redhat-ods-applications
+----
+
+== Appendix
+
+=== Directory Structure
+
+[source]
+----
+manifests/04-rhoai-config/
+  kustomization.yaml             # Aggregates all RHOAI config resources
+  dscinitialization.yaml         # DSCInitialization CR
+  datasciencecluster.yaml        # DataScienceCluster CR
+  odh-dashboard-config.yaml      # OdhDashboardConfig CR
 ----
 
 == References
