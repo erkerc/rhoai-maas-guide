@@ -178,3 +178,7 @@ The Kustomize-deployed simulator uses `simulator-free` and `simulator-premium`. 
 
 * link:https://github.com/opendatahub-io/models-as-a-service[MaaS upstream documentation]
 * link:https://github.com/rh-aiservices-bu/rhoai-nightly/blob/main/scripts/verify-maas.sh[MaaS verification in rhoai-nightly]
+
+== Next step
+
+Proceed to xref:07-observability.adoc[Phase 7: Observability].
