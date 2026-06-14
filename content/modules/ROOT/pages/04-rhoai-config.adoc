@@ -18,8 +18,8 @@ Expected output:
 
 [source]
 ----
-NAME                DISPLAY                    VERSION   REPLICA   PHASE       AGE
-rhods-operator       Red Hat OpenShift AI       3.4.0     1         Succeeded   25m
+NAME                     DISPLAY                 VERSION   REPLACES               PHASE
+rhods-operator.3.4.0     Red Hat OpenShift AI    3.4.0     rhods-operator.3.3.2   Succeeded
 ----
 
 == Apply

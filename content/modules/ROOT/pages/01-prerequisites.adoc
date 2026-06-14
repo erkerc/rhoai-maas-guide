@@ -227,17 +227,20 @@ oc get subscriptions.operators.coreos.com -A \
 
 Expected Results:
 
+NOTE: Exact CSV versions will vary depending on when you install. The versions below were current as of June 2026.
+
 [source]
 ----
 NAMESPACE                NAME                                                                                   CSV                                                STATE
 cert-manager-operator    openshift-cert-manager-operator                                                        cert-manager-operator.v1.19.0                      AtLatestKnown
-metallb-system           metallb-operator                                                                       metallb-operator.v4.20.0-202605260442              AtLatestKnown
+metallb-system           metallb-operator                                                                       metallb-operator.v4.20.0-...                       AtLatestKnown
 openshift-lws-operator   leader-worker-set                                                                      leader-worker-set.v1.0.0                           AtLatestKnown
-openshift-operators      authorino-operator-stable-redhat-operators-openshift-marketplace                       authorino-operator.v1.3.1                          AtLatestKnown
-openshift-operators      limitador-operator-stable-redhat-operators-openshift-marketplace                       limitador-operator.v1.3.1                          AtLatestKnown
-openshift-operators      rhcl-operator                                                                          rhcl-operator.v1.3.4                               AtLatestKnown
+openshift-operators      authorino-operator-stable-redhat-operators-openshift-marketplace                       authorino-operator.v1.4.0                          AtLatestKnown
+openshift-operators      dns-operator-stable-redhat-operators-openshift-marketplace                             dns-operator.v1.4.0                                AtLatestKnown
+openshift-operators      limitador-operator-stable-redhat-operators-openshift-marketplace                       limitador-operator.v1.4.0                          AtLatestKnown
+openshift-operators      rhcl-operator                                                                          rhcl-operator.v1.4.0                               AtLatestKnown
 openshift-operators      servicemeshoperator3                                                                   servicemeshoperator3.v3.3.3                        AtLatestKnown
-
+redhat-ods-operator      rhods-operator                                                                         rhods-operator.3.4.0                               AtLatestKnown
 ----
 
 = Appendix:

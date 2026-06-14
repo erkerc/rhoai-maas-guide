@@ -45,7 +45,7 @@ When all checks pass, the script prints:
 MaaS Verification Summary
 =========================================
 MaaS API URL:  https://maas.<cluster-domain>
-Passed:        10
+Passed:        15
 Failed:        0
 Status:        ALL CHECKS PASSED
 =========================================
@@ -98,15 +98,21 @@ oc get pods -n llm
 DOMAIN=$(oc get ingresses.config/cluster -o jsonpath='{.spec.domain}')
 HOST="https://maas.${DOMAIN}"
 
-# Create API key
-curl -sk -X POST \
+# Create API key (save the key and model URL for subsequent phases)
+API_KEY=$(curl -sk -X POST \
   -H "Authorization: Bearer $(oc whoami -t)" \
   -H "Content-Type: application/json" \
   -d '{"name":"test","expiresIn":"1h","subscription":"simulator-subscription"}' \
-  "${HOST}/maas-api/v1/api-keys"
+  "${HOST}/maas-api/v1/api-keys" | jq -r '.key')
+echo "API_KEY=${API_KEY}"
 
-# List models (use the key from the previous response)
-curl -sk -H "Authorization: Bearer <API_KEY>" "${HOST}/maas-api/v1/models"
+# List models
+curl -sk -H "Authorization: Bearer ${API_KEY}" "${HOST}/v1/models"
+
+# Get the model endpoint URL
+MODEL_URL=$(curl -sk -H "Authorization: Bearer ${API_KEY}" \
+  "${HOST}/v1/models" | jq -r '.data[0].url')
+echo "MODEL_URL=${MODEL_URL}"
 ----
 
 === Phase 4: Auth enforcement
@@ -117,7 +123,7 @@ curl -sk -H "Authorization: Bearer <API_KEY>" "${HOST}/maas-api/v1/models"
 curl -sk -o /dev/null -w '%{http_code}' \
   -H "Content-Type: application/json" \
   -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"Hello"}]}' \
-  "<MODEL_URL>/v1/chat/completions"
+  "${MODEL_URL}/v1/chat/completions"
 ----
 
 === Phase 5: Rate limiting
@@ -127,10 +133,10 @@ curl -sk -o /dev/null -w '%{http_code}' \
 # Send rapid requests and watch for 429
 for i in $(seq 1 16); do
   curl -sk -o /dev/null -w '%{http_code}\n' \
-    -H "Authorization: Bearer <API_KEY>" \
+    -H "Authorization: Bearer ${API_KEY}" \
     -H "Content-Type: application/json" \
     -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"Hello, write a long essay"}],"max_tokens":50}' \
-    "<MODEL_URL>/v1/chat/completions"
+    "${MODEL_URL}/v1/chat/completions"
 done
 ----
 
