@@ -15,14 +15,7 @@ The MaaS platform requires a PostgreSQL database before the RHOAI operator can f
 . *PostgreSQL database* - stores API key metadata (hashed tokens, subscription bindings, expiration, revocation state).
 . *PostgreSQL secrets* - `postgres-creds` (DB credentials) and `maas-db-config` (connection URL consumed by maas-api).
 
-== Quick start (automated)
-
-The `scripts/setup-maas.sh` script handles all of the above in a single command:
-
-[source,bash]
-----
-./scripts/setup-maas.sh
-----
+TIP: If you prefer the fully automated path, see xref:quick-start.adoc[Automated Setup]. To run only this phase automatically: `./scripts/setup-maas.sh --from-phase 3`
 
 == Manual setup
 
