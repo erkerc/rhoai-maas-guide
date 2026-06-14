@@ -177,7 +177,11 @@ For GPU models, replace the model name with `granite-4-tiny` or `gpt-oss-20b` as
 oc delete -k manifests/05-maas-models/simulator/
 ----
 
-== Further Reading
+== References
 
 * link:https://opendatahub-io.github.io/models-as-a-service/latest/[Upstream MaaS Documentation]
 * link:https://github.com/opendatahub-io/models-as-a-service[MaaS CRD Reference (models-as-a-service repo)]
+
+== Next step
+
+Proceed to xref:06-verification.adoc[Phase 6: Verification].

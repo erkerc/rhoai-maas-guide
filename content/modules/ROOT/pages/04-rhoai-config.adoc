@@ -163,6 +163,12 @@ oc logs -n redhat-ods-operator deployment/rhods-operator --tail=100
 oc get pods -n redhat-ods-applications
 ----
 
+== References
+
+* link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas[RHOAI 3.4 MaaS Official Docs]
+* link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/installing_and_uninstalling_openshift_ai_self-managed/index[RHOAI 3.4 Installation Guide]
+* link:https://opendatahub-io.github.io/models-as-a-service/latest/[Upstream MaaS Documentation]
+
 == Next step
 
 Proceed to xref:05-maas-models.adoc[Phase 5: Model Deployment].

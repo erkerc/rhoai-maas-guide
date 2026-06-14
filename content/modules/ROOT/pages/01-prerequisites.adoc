@@ -243,9 +243,9 @@ openshift-operators      servicemeshoperator3                                   
 redhat-ods-operator      rhods-operator                                                                         rhods-operator.3.4.0                               AtLatestKnown
 ----
 
-= Appendix:
+== Appendix
 
-== Directory Structure
+=== Directory Structure
 
 [source]
 ----
@@ -274,3 +274,7 @@ manifests/01-prerequisites/
 * link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas[RHOAI 3.4 MaaS Official Docs]
 * link:https://opendatahub-io.github.io/models-as-a-service/latest/[Upstream MaaS Documentation]
 * link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/installing_and_uninstalling_openshift_ai_self-managed/index[RHOAI 3.4 Installation Guide]
+
+== Next step
+
+Proceed to xref:02-platform-config.adoc[Phase 2: Platform Configuration].
