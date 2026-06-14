@@ -253,7 +253,7 @@ if should_run 1; then
                 log_info "  Waiting for CSV in $ns..."
                 oc wait csv -n "$ns" -l "$label=" \
                     --for=jsonpath='{.status.phase}'=Succeeded --timeout=600s 2>/dev/null || \
-                    log_warn "  CSV in $ns did not reach Succeeded within 600s"
+                    { log_error "  CSV in $ns did not reach Succeeded within 600s — aborting (re-run with --from-phase 1 after manual check)"; exit 1; }
             done
         fi
         log_info "All operator CSVs ready"
@@ -283,9 +283,9 @@ if should_run 2; then
                     -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}' 2>/dev/null || echo "")
                 if echo "$KUADRANT_MSG" | grep -i "MissingDependency" >/dev/null 2>&1; then
                     log_warn "Kuadrant reports MissingDependency (Istio race)  - restarting operator pod..."
-                    oc delete pod -n openshift-operators -l app.kubernetes.io/name=kuadrant-operator-controller-manager 2>/dev/null || \
-                        oc delete pod -n openshift-operators -l control-plane=controller-manager 2>/dev/null || \
-                        oc delete pod -n openshift-operators $(oc get pods -n openshift-operators --no-headers 2>/dev/null | grep kuadrant-operator | awk '{print $1}' | head -1) 2>/dev/null || true
+                    oc delete pod -n openshift-operators \
+                        $(oc get pods -n openshift-operators --no-headers 2>/dev/null | grep kuadrant-operator | awk '{print $1}' | head -1) 2>/dev/null || \
+                        oc delete pod -n openshift-operators -l control-plane=controller-manager,app=kuadrant 2>/dev/null || true
                     log_info "Operator pod restarted, waiting for Kuadrant Ready..."
                 fi
                 oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=180s 2>/dev/null || \
@@ -563,6 +563,16 @@ if should_run 4; then
 
         log_step "Applying OdhDashboardConfig..."
         run_cmd oc apply -f "$MANIFESTS_DIR/04-rhoai-config/odh-dashboard-config.yaml"
+        if [ "$DRY_RUN" = false ]; then
+            for _attempt in 1 2 3; do
+                sleep 10
+                MAAS_FLAG=$(oc get odhdashboardconfig odh-dashboard-config -n "$NAMESPACE" \
+                    -o jsonpath='{.spec.dashboardConfig.modelAsService}' 2>/dev/null || echo "")
+                if [ "$MAAS_FLAG" = "true" ]; then break; fi
+                log_warn "Dashboard config flags overridden by operator — re-applying (attempt $_attempt)..."
+                oc apply -f "$MANIFESTS_DIR/04-rhoai-config/odh-dashboard-config.yaml" 2>/dev/null || true
+            done
+        fi
         log_info "Dashboard config applied"
     fi
 
@@ -658,6 +668,7 @@ if should_run 5 && [ "$SKIP_MODELS" = false ]; then
         if ! oc get namespace llm &>/dev/null; then
             run_cmd oc create namespace llm
         fi
+        oc label namespace llm opendatahub.io/generated-namespace=true --overwrite 2>/dev/null || true
         run_cmd oc apply -k "$MODEL_DIR/"
         log_info "Model manifests applied"
 
@@ -764,7 +775,7 @@ if [ "$DRY_RUN" = true ]; then
     log_info "Status:        DRY RUN  - no changes applied"
 else
     # Gather final state
-    RHOAI_VERSION=$(oc get csv -n redhat-ods-operator --no-headers 2>/dev/null | grep rhods | awk '{print $2}' || echo "unknown")
+    RHOAI_VERSION=$(oc get csv -n redhat-ods-operator -l operators.coreos.com/rhods-operator.redhat-ods-operator= -o jsonpath='{.items[0].spec.version}' 2>/dev/null || echo "unknown")
     GW_STATUS=$(oc get gateway maas-default-gateway -n openshift-ingress \
         -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null || echo "Unknown")
     API_READY=$(oc get deployment maas-api -n "$NAMESPACE" \

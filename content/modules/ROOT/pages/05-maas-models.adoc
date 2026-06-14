@@ -85,11 +85,12 @@ Each model follows the same Kustomize layout:
 
 == Deploying a Model
 
-Create the `llm` namespace if it doesn't exist:
+Create the `llm` namespace if it doesn't exist and label it for RHOAI:
 
 [source,bash]
 ----
 oc create namespace llm
+oc label namespace llm opendatahub.io/generated-namespace=true --overwrite
 ----
 
 Deploy the simulator (no GPU required):

@@ -248,7 +248,9 @@ log_step "Phase 2: Deploy simulator model and MaaS resources"
 
 # Create namespaces
 oc create namespace "$MODEL_NS" --dry-run=client -o yaml | oc apply -f - 2>/dev/null
+oc label namespace "$MODEL_NS" opendatahub.io/generated-namespace=true --overwrite 2>/dev/null || true
 oc create namespace "$MAAS_NS" --dry-run=client -o yaml | oc apply -f - 2>/dev/null
+oc label namespace "$MAAS_NS" opendatahub.io/generated-namespace=true --overwrite 2>/dev/null || true
 log_info "Ensured namespaces: $MODEL_NS, $MAAS_NS"
 
 # Deploy LLMInferenceService (simulator model)
