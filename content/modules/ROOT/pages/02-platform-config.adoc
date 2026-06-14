@@ -57,8 +57,6 @@ oc wait --for=condition=Ready kuadrant/kuadrant -n kuadrant-system --timeout=180
 Now that Kuadrant is deployed, we need to update the Authorino CR to enable TLS. (Detailed documentation for this step is available in the link:https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas#configure-tls-for-maas_maas-deploy[RHOAI 3.4 docs section 1.4]. )
 Follow the four steps below to enable TLS between the Gateway and Authorino.
 
-Follow the four steps below to enable TLS between the Gateway and Authorino.
-
 *Step 2a:* The service annotation (already applied above) triggered the service-ca operator to generate the `authorino-server-cert` TLS Secret:
 
 [source,bash]
@@ -173,41 +171,49 @@ openshift-default   openshift.io/gateway-controller/v1   True       ...
 
 The Gateway uses cluster-specific values (domain and TLS cert name), so it is provided as an `envsubst` template. Here we will extract the values, render the template, and apply them.
 
-Step 5a: Check Your Platform Type
+*Step 5a:* Check Your Platform Type
 
 Before creating the Gateway, determine if your cluster requires additional configuration for non-cloud platforms:
 
 [source,bash]
-
+----
 oc get infrastructure cluster -o jsonpath='{.status.platform}'
+----
 
-If the output is `AWS`, `Azure`, `GCP`, or another cloud provider: Skip to Step 5b (create Gateway).
+[cols="1,2", options="header"]
+|===
+| Platform output | What to do
 
-If the output is `None`, `BareMetal`, or `OpenStack`: Your cluster is running on a non-cloud platform and requires MetalLB and a passthrough Route. Continue below.
+| `AWS`, `Azure`, `GCP` (cloud)
+| *Skip to Step 5b* — create the Gateway directly.
 
----
-Step 5a.1: Verify MetalLB is Installed (Non-Cloud Platforms Only)
+| `None`, `BareMetal`, `OpenStack`
+| *Continue to Step 5a.1* — verify MetalLB is installed first.
+|===
+
+*Step 5a.1:* Verify MetalLB is Installed (Non-Cloud Platforms Only)
 
 Check if MetalLB is installed:
 
 [source,bash]
-
+----
 oc get deployment metallb-operator-controller-manager -n metallb-system 2>/dev/null
+----
 
 If you see "NotFound" or "Error":
 
 [WARNING]
-
-MetalLB is not installed. Without it, the Gateway will never reach Programmed=True because there is no cloud load balancer to assign an external IP.
+====
+MetalLB is not installed. Without it, the Gateway will never reach `Programmed=True` because there is no cloud load balancer to assign an external IP.
 
 You must go back and complete: xref:01-prerequisites.adoc#_optional_metallb_operator_non_cloud_clusters[Phase 1: MetalLB for Non-Cloud Clusters]
 
 After installing MetalLB and configuring an IPAddressPool, return to this step.
+====
 
 If MetalLB is installed: Continue to the next step.
 
----
-Step 5b: Create the MaaS Gateway
+*Step 5b:* Create the MaaS Gateway
 
 [source,bash]
 ----
@@ -230,7 +236,7 @@ echo $CERT_NAME
 envsubst '${CLUSTER_DOMAIN} ${CERT_NAME}' < manifests/02-platform-config/gateway.yaml.tmpl | oc apply -f -
 ----
 
-Step 5c: Annotate the Gateway for Authorino TLS bootstrap:
+*Step 5c:* Annotate the Gateway for Authorino TLS bootstrap:
 
 [source,bash]
 ----
@@ -246,7 +252,7 @@ oc wait --for=condition=Programmed gateway/maas-default-gateway \
   -n openshift-ingress --timeout=120s
 ----
 
-Step 5d: Create Passthrough Route (Non-Cloud Platforms Only)
+*Step 5d:* Create Passthrough Route (Non-Cloud Platforms Only)
 
 If your platform type from Step 5a was `None`, `BareMetal`, or `OpenStack`, you must create a passthrough Route. This routes external traffic through the OpenShift ingress controller to the Gateway's LoadBalancer service.
 
@@ -261,24 +267,28 @@ envsubst '${CLUSTER_DOMAIN}' < manifests/03-maas-platform/openshift-gateway-setu
 ----
 
 [NOTE]
-
-Why is this needed?
+====
+*Why is this needed?*
 
 On non-cloud platforms, the Gateway's LoadBalancer service receives an IP from MetalLB (e.g., 10.10.10.10), but that IP is only routable within the cluster network. External traffic cannot reach it directly.
 
 The passthrough Route bridges external requests (via the OpenShift router at your cluster's public DNS) to the internal LoadBalancer IP, allowing the Gateway to be accessible from outside the cluster.
+====
 
 Verify the Route was created:
 
 [source,bash]
-
+----
 oc get route maas-default-gateway-https -n openshift-ingress
+----
 
 Expected output:
-[source]
 
+[source]
+----
 NAME                          HOST/PORT                              PATH   SERVICES                                   PORT    TERMINATION   WILDCARD
 maas-default-gateway-https   maas.apps.                    maas-default-gateway-openshift-default     https   passthrough   None
+----
 
 
 == Verification
