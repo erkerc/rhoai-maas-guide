@@ -252,8 +252,8 @@ if should_run 1; then
                 label="${ns_label#* }"
                 log_info "  Waiting for CSV in $ns..."
                 oc wait csv -n "$ns" -l "$label=" \
-                    --for=jsonpath='{.status.phase}'=Succeeded --timeout=600s 2>/dev/null || \
-                    { log_error "  CSV in $ns did not reach Succeeded within 600s — aborting (re-run with --from-phase 1 after manual check)"; exit 1; }
+                    --for=jsonpath='{.status.phase}'=Succeeded --timeout=900s 2>/dev/null || \
+                    { log_error "  CSV in $ns did not reach Succeeded within 900s — aborting (re-run with --from-phase 1 after manual check)"; exit 1; }
             done
         fi
         log_info "All operator CSVs ready"
