@@ -62,6 +62,24 @@ Check the Istio Telemetry exists:
 oc get telemetry.telemetry.istio.io latency-per-subscription -n openshift-ingress
 ----
 
+== Appendix
+
+=== Directory Structure
+
+[source]
+----
+manifests/07-observability/
+  coo/
+    kustomization.yaml           # COO operator subscription
+    namespace.yaml               # COO namespace
+    operatorgroup.yaml           # COO OperatorGroup
+    subscription.yaml            # COO Subscription
+  telemetry/
+    gateway-telemetry-policy.yaml    # Kuadrant TelemetryPolicy
+    istio-gateway-telemetry.yaml     # Istio Telemetry CR
+    kustomization.yaml
+----
+
 == References
 
 * link:https://docs.redhat.com/en/documentation/red_hat_openshift_cluster_observability_operator/1-latest[Cluster Observability Operator documentation]

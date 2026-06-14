@@ -64,26 +64,31 @@ Defines rate-limiting tiers for model access. Each model ships with two tiers:
 
 Higher-priority subscriptions take precedence. You can adjust limits, windows, and subject groups to match your usage policies.
 
-== Directory Structure
-
-Each model follows the same Kustomize layout:
-
-[source]
-----
-{model}/
-  kustomization.yaml          # Aggregates llm/ and maas/ subdirectories
-  llm/
-    model.yaml                # LLMInferenceService CR
-    kustomization.yaml        # Sets namespace: llm (+ namePrefix for simulator)
-  maas/
-    maas-model.yaml           # MaaSModelRef CR
-    maas-auth-policy.yaml     # MaaSAuthPolicy CR (namespace: models-as-a-service)
-    maas-subscription-free.yaml     # Free tier MaaSSubscription
-    maas-subscription-premium.yaml  # Premium tier MaaSSubscription
-    kustomization.yaml        # Lists all MaaS resources
-----
-
 == Deploying a Model
+
+[WARNING]
+====
+*Gateway Pod OOMKilled After Model Deployment*
+
+Deploying a model creates HTTPRoute and Kuadrant policy resources that trigger the Istio gateway to load Wasm extensions (Authorino auth, Limitador rate limiting). This Wasm compilation can push the gateway pod past its default `1Gi` memory limit, causing `OOMKilled` (exit code 137) and `CrashLoopBackOff`.
+
+The gateway may have been healthy throughout Phases 1-4, and only start OOMKilling after the model is deployed in this phase.
+
+If the gateway pod starts crashing after deploying a model, increase the memory limit:
+
+[source,bash]
+----
+oc patch deployment maas-default-gateway-openshift-default -n openshift-ingress \
+  --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"2Gi"}]'
+
+oc patch deployment data-science-gateway-data-science-gateway-class -n openshift-ingress \
+  --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"2Gi"}]'
+----
+
+IMPORTANT: The Istio gateway controller will revert this patch within seconds during reconciliation. However, pods that were already created with the 2Gi limit will continue running. If the pods restart for any reason, you will need to re-apply the patch.
+
+See also: xref:02-platform-config.adoc#_gateway_pod_oomkilled_crashloopbackoff[Phase 2: Gateway OOMKill troubleshooting].
+====
 
 Create the `llm` namespace if it doesn't exist and label it for RHOAI:
 
@@ -175,6 +180,27 @@ For GPU models, replace the model name with `granite-4-tiny` or `gpt-oss-20b` as
 [source,bash]
 ----
 oc delete -k manifests/05-maas-models/simulator/
+----
+
+== Appendix
+
+=== Directory Structure
+
+Each model follows the same Kustomize layout:
+
+[source]
+----
+{model}/
+  kustomization.yaml          # Aggregates llm/ and maas/ subdirectories
+  llm/
+    model.yaml                # LLMInferenceService CR
+    kustomization.yaml        # Sets namespace: llm (+ namePrefix for simulator)
+  maas/
+    maas-model.yaml           # MaaSModelRef CR
+    maas-auth-policy.yaml     # MaaSAuthPolicy CR (namespace: models-as-a-service)
+    maas-subscription-free.yaml     # Free tier MaaSSubscription
+    maas-subscription-premium.yaml  # Premium tier MaaSSubscription
+    kustomization.yaml        # Lists all MaaS resources
 ----
 
 == References
