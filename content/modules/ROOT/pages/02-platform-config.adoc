@@ -286,8 +286,8 @@ Expected output:
 
 [source]
 ----
-NAME                          HOST/PORT                              PATH   SERVICES                                   PORT    TERMINATION   WILDCARD
-maas-default-gateway-https   maas.apps.                    maas-default-gateway-openshift-default     https   passthrough   None
+NAME                         HOST/PORT                              PATH   SERVICES                                 PORT    TERMINATION            WILDCARD
+maas-default-gateway-https   maas.apps.<cluster-domain>                    maas-default-gateway-openshift-default   https   passthrough/Redirect   None
 ----
 
 
@@ -359,7 +359,8 @@ $ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.s
 $ echo $CLUSTER_DOMAIN
 apps.`<your cluster name>`.`<your domain>`
 curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"
-* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / x25519 / RSASSA-PSS
+* Connected to maas.apps.<cluster-domain> (...) port 443
+* SSL connection using TLSv1.3 / ...    <-- exact cipher varies by client
 ----
 
 == References
