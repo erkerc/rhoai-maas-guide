@@ -345,7 +345,7 @@ maas-default-gateway   openshift-default   10.10.10.10   True         13m
 $ oc get route maas-default-gateway-https -n openshift-ingress -o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}'
 True
 
-$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')n}')
+$ CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
 $ echo $CLUSTER_DOMAIN
 apps.`<your cluster name>`.`<your domain>`
 curl -vsk https://maas.${CLUSTER_DOMAIN} 2>&1 | grep -E "SSL connection|Connected"

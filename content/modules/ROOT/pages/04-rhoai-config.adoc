@@ -32,7 +32,7 @@ On a fresh install, apply in two stages. The `OdhDashboardConfig` CRD does not e
 oc apply -f manifests/04-rhoai-config/dscinitialization.yaml
 ----
 
-Wait until the DCSI is created (this step must complete before creating the DSC):
+Wait until the DSCI is created (this step must complete before creating the DSC):
 
 [source,bash]
 ----
@@ -47,7 +47,7 @@ Create the Data Science Cluster:
 oc apply -f manifests/04-rhoai-config/datasciencecluster.yaml
 ----
 
-The DataScienceCluster reconciles multiple components. Wait for `KServe` and the `Model Controller` (MaaS) to reach Ready: +
+The DataScienceCluster reconciles multiple components. Wait for `KServe` and the `Model Controller` (MaaS) to reach Ready:
 
 [source,bash]
 ----
@@ -55,7 +55,7 @@ oc wait --for=jsonpath='{.status.phase}'=Ready \
   datasciencecluster/default-dsc --timeout=600s
 ----
 
-With the Data Science Cluster created we can not apply the dashboard configuration:
+With the Data Science Cluster created we can now apply the dashboard configuration:
 
 [source,bash]
 ----
@@ -113,13 +113,6 @@ NOTE: The `default-tenant` CR may show `Ready=False` with reason `DeploymentsNot
 CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
 curl -sk "https://maas.${CLUSTER_DOMAIN}/maas-api/health"
 # Expected: {"status":"healthy"}
-----
-
-=== Check DSCInitialization
-
-[source,bash]
-----
-oc get dscinitializations default-dsci -o jsonpath='{.status.conditions}' | jq .
 ----
 
 === Check OdhDashboardConfig flags
